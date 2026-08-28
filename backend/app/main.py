@@ -290,6 +290,28 @@ async def upload_context_photo(
     return point_to_dict(point)
 
 
+@app.post("/api/points/{monitor_point_id}/baseline")
+async def capture_baseline(
+    monitor_point_id: str,
+    image: UploadFile = File(...),
+    session: Session = Depends(get_db),
+) -> dict:
+    if image.content_type and not image.content_type.startswith("image/"):
+        raise HTTPException(415, "仅支持图片文件。")
+    raw = await image.read()
+    if len(raw) > 20 * 1024 * 1024:
+        raise HTTPException(413, "图片不能超过 20 MB。")
+    try:
+        return create_measurement(
+            session, raw, None, None,
+            original_filename=image.filename or "baseline",
+            monitor_point_id=monitor_point_id,
+            capture_mode="baseline",
+        )
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+
+
 @app.post("/api/measure")
 async def measure(
     image: UploadFile = File(...),
@@ -297,6 +319,8 @@ async def measure(
     browser_lon: float | None = Form(default=None),
     camera_profile: str | None = Form(default=None),
     demo_case_id: str | None = Form(default=None),
+    point: str | None = Form(default=None),
+    capture_mode: str = Form(default="recheck"),
     session: Session = Depends(get_db),
 ) -> dict:
     if image.content_type and not image.content_type.startswith("image/"):
@@ -313,6 +337,8 @@ async def measure(
             browser_lon,
             original_filename=image.filename or "unnamed",
             demo_case_id=demo_case_id,
+            monitor_point_id=point,
+            capture_mode=capture_mode,
         )
     except ValueError as error:
         raise HTTPException(422, str(error)) from error
@@ -338,8 +364,10 @@ def confirm_inspection(
     inspection.visible_change_note = build_confirmed_record_text(session, inspection)
     if payload.visible_change_note:
         inspection.visible_change_note += f"人工补充：{payload.visible_change_note}"
-    session.commit()
     point = session.get(MonitorPoint, inspection.monitor_point_id)
+    if inspection.capture_mode == "baseline" and point.baseline_inspection_id is None:
+        point.baseline_inspection_id = inspection.id
+    session.commit()
     response = inspection_to_dict(inspection, point)
     review = latest_ai_review(session, inspection.id)
     response["ai_review"] = ai_review_to_dict(session, review) if review else None
