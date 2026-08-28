@@ -7,6 +7,7 @@ import statistics
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime
+from typing import Literal
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -320,7 +321,7 @@ async def measure(
     camera_profile: str | None = Form(default=None),
     demo_case_id: str | None = Form(default=None),
     point: str | None = Form(default=None),
-    capture_mode: str = Form(default="recheck"),
+    capture_mode: Literal["baseline", "recheck"] = Form(default="recheck"),
     session: Session = Depends(get_db),
 ) -> dict:
     if image.content_type and not image.content_type.startswith("image/"):

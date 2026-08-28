@@ -1,3 +1,6 @@
+import cv2
+import numpy as np
+
 from app.db.session import SessionLocal
 from app.models import Inspection
 
@@ -11,6 +14,17 @@ def test_recheck_before_baseline_is_refused(client, make_point, crack_photo):
     )
     assert response.status_code == 422
     assert "建档" in response.json()["detail"]
+
+
+def test_unknown_capture_mode_is_refused(client, make_point, crack_photo):
+    """An unrecognised mode must not slip past both baseline gates."""
+    boards = make_point("MP-BL08")
+    response = client.post(
+        "/api/measure",
+        files={"image": ("a.png", crack_photo(boards, 0.0), "image/png")},
+        data={"point": "MP-BL08", "capture_mode": "definitely-not-a-mode"},
+    )
+    assert response.status_code == 422
 
 
 def test_baseline_then_recheck_reports_both_numbers(
@@ -46,7 +60,7 @@ def test_baseline_then_recheck_reports_both_numbers(
     assert abs(second["opening_delta_mm"] - 3.0) <= 1.0
 
 
-def test_explicit_point_mismatch_is_refused_and_never_falls_back(
+def test_explicit_point_mismatch_is_refused(
     client, make_point, crack_photo, confirm_inspection
 ):
     boards_a = make_point("MP-BL03")
@@ -64,6 +78,33 @@ def test_explicit_point_mismatch_is_refused_and_never_falls_back(
     )
     assert response.status_code == 422
     assert "MP-BL03" in response.json()["detail"]
+
+
+def test_explicit_point_never_falls_back_to_the_demo_point(client, make_point):
+    """With an explicit point, an unreadable photo must fail rather than land on MP-03."""
+    make_point("MP-BL09")
+    blank = cv2.imencode(".png", np.full((600, 800, 3), 200, np.uint8))[1].tobytes()
+    with SessionLocal() as session:
+        before = session.query(Inspection).filter(
+            Inspection.monitor_point_id == "MP-03"
+        ).count()
+
+    response = client.post(
+        "/api/measure",
+        files={"image": ("blank.png", blank, "image/png")},
+        data={
+            "point": "MP-BL09",
+            "capture_mode": "recheck",
+            "demo_case_id": "case_02_widening",
+        },
+    )
+    assert response.status_code == 422
+
+    with SessionLocal() as session:
+        after = session.query(Inspection).filter(
+            Inspection.monitor_point_id == "MP-03"
+        ).count()
+    assert after == before
 
 
 def test_second_baseline_is_refused(client, make_point, crack_photo, confirm_inspection):

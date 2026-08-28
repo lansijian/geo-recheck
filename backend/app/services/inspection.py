@@ -185,6 +185,8 @@ def create_measurement(
     if point is None:
         raise ValueError("未能从左右视觉标靶自动匹配监测点。")
 
+    if capture_mode not in {"baseline", "recheck"}:
+        raise ValueError("采集模式必须为 baseline 或 recheck。")
     if capture_mode == "recheck" and point.baseline_inspection_id is None:
         raise ValueError("该监测点尚未完成首次建档，请先采集并确认基线照片。")
     if capture_mode == "baseline" and point.baseline_inspection_id is not None:
