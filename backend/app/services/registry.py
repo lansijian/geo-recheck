@@ -35,19 +35,16 @@ def point_to_dict(point: MonitorPoint) -> dict:
 def seed_points(session: Session) -> None:
     payload = json.loads((SEED_ROOT / "point_registry.json").read_text(encoding="utf-8"))
     for record in payload:
-        if session.get(MonitorPoint, record["monitor_point_id"]):
-            continue
-        session.add(
-            MonitorPoint(
-                **{
-                    key: value
-                    for key, value in record.items()
-                    if key not in {"left_marker_group", "right_marker_group"}
-                },
-                left_marker_group=",".join(map(str, record["left_marker_group"])),
-                right_marker_group=",".join(map(str, record["right_marker_group"])),
-            )
-        )
+        point = session.get(MonitorPoint, record["monitor_point_id"])
+        if point is None:
+            point = MonitorPoint(monitor_point_id=record["monitor_point_id"])
+            session.add(point)
+        for key, value in record.items():
+            if key in {"left_marker_group", "right_marker_group", "monitor_point_id"}:
+                continue
+            setattr(point, key, value)
+        point.left_marker_group = ",".join(map(str, record["left_marker_group"]))
+        point.right_marker_group = ",".join(map(str, record["right_marker_group"]))
     session.commit()
 
 
@@ -60,4 +57,3 @@ def match_point(session: Session, detected_ids: list[int]) -> MonitorPoint | Non
         if len(detected & left) >= 3 and len(detected & right) >= 3:
             return point
     return None
-

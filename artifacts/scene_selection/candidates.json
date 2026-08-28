@@ -1,0 +1,182 @@
+[
+  {
+    "image": "data/datasets/ozgenel/rgb/328.jpg",
+    "mask": "data/datasets/ozgenel/BW/328.jpg",
+    "score": 5.37417,
+    "mask_coverage": 0.005088,
+    "x_span": 0.0775,
+    "y_span": 1.0,
+    "median_crack_x_ratio": 0.5165
+  },
+  {
+    "image": "data/datasets/ozgenel/rgb/529.JPG",
+    "mask": "data/datasets/ozgenel/BW/529.jpg",
+    "score": 5.33544,
+    "mask_coverage": 0.024909,
+    "x_span": 0.1353,
+    "y_span": 1.0,
+    "median_crack_x_ratio": 0.5026
+  },
+  {
+    "image": "data/datasets/ozgenel/rgb/417.JPG",
+    "mask": "data/datasets/ozgenel/BW/417.jpg",
+    "score": 5.27666,
+    "mask_coverage": 0.011858,
+    "x_span": 0.1402,
+    "y_span": 1.0,
+    "median_crack_x_ratio": 0.4772
+  },
+  {
+    "image": "data/datasets/ozgenel/rgb/530.JPG",
+    "mask": "data/datasets/ozgenel/BW/530.jpg",
+    "score": 5.26372,
+    "mask_coverage": 0.020287,
+    "x_span": 0.1832,
+    "y_span": 1.0,
+    "median_crack_x_ratio": 0.5288
+  },
+  {
+    "image": "data/datasets/ozgenel/rgb/465.JPG",
+    "mask": "data/datasets/ozgenel/BW/465.jpg",
+    "score": 5.25964,
+    "mask_coverage": 0.008356,
+    "x_span": 0.1389,
+    "y_span": 1.0,
+    "median_crack_x_ratio": 0.4769
+  },
+  {
+    "image": "data/datasets/ozgenel/rgb/442.JPG",
+    "mask": "data/datasets/ozgenel/BW/442.jpg",
+    "score": 5.24171,
+    "mask_coverage": 0.007862,
+    "x_span": 0.1481,
+    "y_span": 1.0,
+    "median_crack_x_ratio": 0.4868
+  },
+  {
+    "image": "data/datasets/ozgenel/rgb/527.JPG",
+    "mask": "data/datasets/ozgenel/BW/527.jpg",
+    "score": 5.22905,
+    "mask_coverage": 0.02622,
+    "x_span": 0.1918,
+    "y_span": 1.0,
+    "median_crack_x_ratio": 0.5073
+  },
+  {
+    "image": "data/datasets/ozgenel/rgb/419.JPG",
+    "mask": "data/datasets/ozgenel/BW/419.jpg",
+    "score": 5.21778,
+    "mask_coverage": 0.013983,
+    "x_span": 0.2021,
+    "y_span": 1.0,
+    "median_crack_x_ratio": 0.5116
+  },
+  {
+    "image": "data/datasets/ozgenel/rgb/145.jpg",
+    "mask": "data/datasets/ozgenel/BW/145.jpg",
+    "score": 5.19715,
+    "mask_coverage": 0.009033,
+    "x_span": 0.1694,
+    "y_span": 1.0,
+    "median_crack_x_ratio": 0.5248
+  },
+  {
+    "image": "data/datasets/ozgenel/rgb/092.jpg",
+    "mask": "data/datasets/ozgenel/BW/092.jpg",
+    "score": 5.19404,
+    "mask_coverage": 0.007649,
+    "x_span": 0.15,
+    "y_span": 1.0,
+    "median_crack_x_ratio": 0.53
+  },
+  {
+    "image": "data/datasets/ozgenel/rgb/413.JPG",
+    "mask": "data/datasets/ozgenel/BW/413.jpg",
+    "score": 5.186,
+    "mask_coverage": 0.010937,
+    "x_span": 0.1997,
+    "y_span": 1.0,
+    "median_crack_x_ratio": 0.4924
+  },
+  {
+    "image": "data/datasets/ozgenel/rgb/132.jpg",
+    "mask": "data/datasets/ozgenel/BW/132.jpg",
+    "score": 5.17211,
+    "mask_coverage": 0.009617,
+    "x_span": 0.2453,
+    "y_span": 1.0,
+    "median_crack_x_ratio": 0.5012
+  },
+  {
+    "image": "data/datasets/ozgenel/rgb/489.JPG",
+    "mask": "data/datasets/ozgenel/BW/489.jpg",
+    "score": 5.16903,
+    "mask_coverage": 0.0181,
+    "x_span": 0.1925,
+    "y_span": 1.0,
+    "median_crack_x_ratio": 0.4375
+  },
+  {
+    "image": "data/datasets/ozgenel/rgb/430.JPG",
+    "mask": "data/datasets/ozgenel/BW/430.jpg",
+    "score": 5.16884,
+    "mask_coverage": 0.013434,
+    "x_span": 0.2017,
+    "y_span": 1.0,
+    "median_crack_x_ratio": 0.4401
+  },
+  {
+    "image": "data/datasets/ozgenel/rgb/168.jpg",
+    "mask": "data/datasets/ozgenel/BW/168.jpg",
+    "score": 5.15439,
+    "mask_coverage": 0.007581,
+    "x_span": 0.131,
+    "y_span": 1.0,
+    "median_crack_x_ratio": 0.5499
+  },
+  {
+    "image": "data/datasets/ozgenel/rgb/596.JPG",
+    "mask": "data/datasets/ozgenel/BW/596.jpg",
+    "score": 5.15411,
+    "mask_coverage": 0.010025,
+    "x_span": 0.21,
+    "y_span": 1.0,
+    "median_crack_x_ratio": 0.5007
+  },
+  {
+    "image": "data/datasets/ozgenel/rgb/595.JPG",
+    "mask": "data/datasets/ozgenel/BW/595.jpg",
+    "score": 5.13905,
+    "mask_coverage": 0.008804,
+    "x_span": 0.1997,
+    "y_span": 1.0,
+    "median_crack_x_ratio": 0.495
+  },
+  {
+    "image": "data/datasets/ozgenel/rgb/416.JPG",
+    "mask": "data/datasets/ozgenel/BW/416.jpg",
+    "score": 5.13808,
+    "mask_coverage": 0.014845,
+    "x_span": 0.1839,
+    "y_span": 1.0,
+    "median_crack_x_ratio": 0.4153
+  },
+  {
+    "image": "data/datasets/ozgenel/rgb/409.JPG",
+    "mask": "data/datasets/ozgenel/BW/409.jpg",
+    "score": 5.12465,
+    "mask_coverage": 0.008826,
+    "x_span": 0.205,
+    "y_span": 1.0,
+    "median_crack_x_ratio": 0.4881
+  },
+  {
+    "image": "data/datasets/ozgenel/rgb/600.JPG",
+    "mask": "data/datasets/ozgenel/BW/600.jpg",
+    "score": 5.1115,
+    "mask_coverage": 0.011741,
+    "x_span": 0.1882,
+    "y_span": 1.0,
+    "median_crack_x_ratio": 0.4272
+  }
+]

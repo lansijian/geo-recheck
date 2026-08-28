@@ -6,6 +6,8 @@ import CapturePage from "./pages/CapturePage";
 import HomePage from "./pages/HomePage";
 import RecordPage from "./pages/RecordPage";
 import ResultPage from "./pages/ResultPage";
+import ScenarioPage from "./pages/ScenarioPage";
+import TechnologyPage from "./pages/TechnologyPage";
 
 export default function App() {
   return (
@@ -16,6 +18,8 @@ export default function App() {
         <Route path="/result/:id" element={<ResultPage />} />
         <Route path="/result" element={<ResultPage />} />
         <Route path="/record/:id" element={<RecordPage />} />
+        <Route path="/scenario" element={<ScenarioPage />} />
+        <Route path="/technology" element={<TechnologyPage />} />
         <Route path="/benchmark" element={<BenchmarkPage />} />
         <Route path="/calibration" element={<CalibrationPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />

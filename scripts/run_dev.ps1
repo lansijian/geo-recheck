@@ -1,9 +1,9 @@
 $ErrorActionPreference = "Stop"
 
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
-$Python = "D:\Anaconda\_envs\PulseWeave\Scripts\python.exe"
+$Python = if ($env:GEORECHECK_PYTHON) { $env:GEORECHECK_PYTHON } else { Join-Path $ProjectRoot ".venv\Scripts\python.exe" }
 if (-not (Test-Path -LiteralPath $Python -PathType Leaf)) {
-    throw "未找到 PulseWeave Python：$Python。请先运行 scripts\setup_windows.ps1。"
+    throw "未找到 Python 环境：$Python。请先运行 scripts\setup_windows.cmd。"
 }
 
 $Backend = Start-Process -FilePath $Python `
@@ -21,4 +21,3 @@ try {
         Stop-Process -Id $Backend.Id
     }
 }
-

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import math
+import time
 import uuid
 from datetime import datetime
 
@@ -18,6 +19,16 @@ from app.services.registry import match_point, point_to_dict
 
 
 logger = logging.getLogger("uvicorn.error")
+
+DEMO_PROVENANCE = {
+    "story": "贵州仁怀基层地灾监测员公开工作场景",
+    "story_source": "https://gz.people.com.cn/n2/2026/0522/c361324-41588761.html",
+    "wall_dataset": "Özgenel Concrete Crack Segmentation Dataset",
+    "wall_source": "https://data.mendeley.com/datasets/jwsn7tfbrp/1",
+    "license": "CC BY 4.0",
+    "deformation": "controlled synthetic wall-plane displacement",
+    "is_real_guizhou_monitoring_data": False,
+}
 
 
 def _camera_for_image(image: np.ndarray) -> tuple[np.ndarray, np.ndarray, dict]:
@@ -70,7 +81,16 @@ def inspection_to_dict(inspection: Inspection, point: MonitorPoint) -> dict:
         "observer_name": inspection.observer_name,
         "previous_distance_mm": inspection.previous_distance_mm,
         "current_distance_mm": inspection.current_distance_mm,
-        "delta_mm": inspection.delta_opening_mm,
+        "delta_mm": inspection.opening_delta_mm if inspection.opening_delta_mm is not None else inspection.delta_opening_mm,
+        "crack_id": inspection.crack_id or "CRACK-W01",
+        "scene_type": inspection.scene_type or "wall_crack_recheck",
+        "baseline_crack_width_mm": inspection.baseline_crack_width_mm,
+        "opening_delta_mm": inspection.opening_delta_mm if inspection.opening_delta_mm is not None else inspection.delta_opening_mm,
+        "shear_delta_mm": inspection.shear_delta_mm,
+        "out_of_plane_delta_mm": inspection.out_of_plane_delta_mm,
+        "measurement_mode": inspection.measurement_mode or "legacy_dual_pnp_distance",
+        "detector_type": inspection.detector_type or "opencv_aruco_apriltag_36h11",
+        "data_provenance": json.loads(inspection.data_provenance) if inspection.data_provenance else DEMO_PROVENANCE,
         "quality_score": inspection.quality_score,
         "status": inspection.measurement_status,
         "human_confirmed": inspection.human_confirmed,
@@ -113,7 +133,9 @@ def create_measurement(
     inspection_id = str(uuid.uuid4())
     evidence_dir = EVIDENCE_ROOT / inspection_id
     camera_matrix, distortion, profile = _camera_for_image(image)
+    started = time.perf_counter()
     result = measure_image(image, camera_matrix, distortion, evidence_dir)
+    processing_ms = (time.perf_counter() - started) * 1000
     logger.info("detected marker ids=%s", result.marker_ids)
     required_evidence = ["original.png", "undistorted.png", "overlay.png", "rectified.png"]
     if result.status == "accepted":
@@ -135,20 +157,42 @@ def create_measurement(
         .where(
             Inspection.monitor_point_id == point.monitor_point_id,
             Inspection.human_confirmed.is_(True),
-            Inspection.current_distance_mm.is_not(None),
         )
         .order_by(desc(Inspection.capture_time))
     )
-    previous_distance = previous.current_distance_mm if previous else point.baseline_mm
+    previous_distance = (
+        previous.current_distance_mm
+        if previous and previous.current_distance_mm is not None
+        else point.baseline_mm
+    )
     current = result.distance_mm
-    delta = current - previous_distance if current is not None else None
+    _, previous_metrics = _quality_payload(previous) if previous else ([], {})
+    baseline_planar = previous_metrics.get("planar_position_mm", [point.baseline_mm, 0.0])
+    baseline_pnp = previous_metrics.get("dual_pnp_position_mm", [point.baseline_mm, 0.0, 0.0])
+    opening_delta = (
+        result.planar_position_mm[0] - float(baseline_planar[0])
+        if result.planar_position_mm is not None
+        else None
+    )
+    shear_delta = (
+        result.planar_position_mm[1] - float(baseline_planar[1])
+        if result.planar_position_mm is not None
+        else None
+    )
+    out_of_plane_delta = (
+        result.dual_pnp_position_mm[2] - float(baseline_pnp[2])
+        if result.dual_pnp_position_mm is not None
+        else None
+    )
     reasons = list(result.quality.reasons)
     status = "pending" if result.status == "accepted" else "rejected"
-    if delta is not None and abs(delta) > max(50.0, previous_distance * 0.25):
+    if opening_delta is not None and abs(opening_delta) > 50.0:
         reasons.append("测量结果与历史差异异常，请重新拍摄或使用卷尺复核。")
         status = "rejected"
         current = None
-        delta = None
+        opening_delta = None
+        shear_delta = None
+        out_of_plane_delta = None
 
     if browser_lat is not None and browser_lon is not None:
         location_match = _haversine_m(browser_lat, browser_lon, point.latitude, point.longitude) <= 100
@@ -171,7 +215,16 @@ def create_measurement(
         longitude=longitude,
         previous_distance_mm=previous_distance,
         current_distance_mm=current,
-        delta_opening_mm=delta,
+        delta_opening_mm=opening_delta,
+        crack_id="CRACK-W01",
+        scene_type="wall_crack_recheck",
+        baseline_crack_width_mm=8.0,
+        opening_delta_mm=opening_delta,
+        shear_delta_mm=shear_delta,
+        out_of_plane_delta_mm=out_of_plane_delta,
+        measurement_mode=result.measurement_mode,
+        detector_type=result.detector_type,
+        data_provenance=json.dumps(DEMO_PROVENANCE, ensure_ascii=False),
         quality_score=result.quality.score,
         measurement_status=status,
         human_confirmed=False,
@@ -206,6 +259,12 @@ def create_measurement(
                         ]
                         or [None]
                     ),
+                    "homography_rmse_mm": result.homography_rmse_mm,
+                    "homography_spread_mm": result.homography_spread_mm,
+                    "planar_position_mm": result.planar_position_mm,
+                    "dual_pnp_position_mm": result.dual_pnp_position_mm,
+                    "legacy_board_center_distance_mm": result.distance_mm,
+                    "processing_ms": round(processing_ms, 2),
                 },
             },
             ensure_ascii=False,
@@ -221,7 +280,11 @@ def create_measurement(
         "is_demo_profile": profile.get("is_demo_profile", False),
     }
     response["previous_evidence"] = (
-        {"rectified": previous.photo_rectified, "capture_time": previous.capture_time.isoformat()}
+        {
+            "original": previous.photo_original,
+            "rectified": previous.photo_rectified,
+            "capture_time": previous.capture_time.isoformat(),
+        }
         if previous
         else None
     )
@@ -233,21 +296,34 @@ def seed_baseline(session: Session) -> None:
     if point is None:
         return
     existing = session.get(Inspection, "00000000-0000-0000-0000-000000000003")
-    if existing:
+    if existing and existing.crack_id == "CRACK-W01":
         return
-    # The benchmark may not have been generated during first setup; seed remains valid without a photo.
-    from app.config import BENCHMARK_ROOT
+    if existing:
+        session.delete(existing)
+        session.commit()
     from app.cv.image_io import read_image
 
-    benchmark_image = BENCHMARK_ROOT / "images" / "000_delta_0_angle_0.png"
+    benchmark_image = EVIDENCE_ROOT.parent / "wall_demo" / "images" / "baseline_front.png"
     rectified_url = None
+    original_url = None
+    overlay_url = None
+    baseline_metrics = {
+        "planar_position_mm": [point.baseline_mm, 0.0],
+        "dual_pnp_position_mm": [point.baseline_mm, 0.0, 0.0],
+    }
     if benchmark_image.exists():
         image = read_image(benchmark_image)
         if image is not None:
             output = EVIDENCE_ROOT / "seed-baseline"
             camera_matrix, distortion, _ = _camera_for_image(image)
-            measure_image(image, camera_matrix, distortion, output)
+            result = measure_image(image, camera_matrix, distortion, output)
+            if result.planar_position_mm:
+                baseline_metrics["planar_position_mm"] = result.planar_position_mm
+            if result.dual_pnp_position_mm:
+                baseline_metrics["dual_pnp_position_mm"] = result.dual_pnp_position_mm
+            original_url = "/media/seed-baseline/original.png"
             rectified_url = "/media/seed-baseline/rectified.png"
+            overlay_url = "/media/seed-baseline/overlay.png"
 
     session.add(
         Inspection(
@@ -260,14 +336,25 @@ def seed_baseline(session: Session) -> None:
             previous_distance_mm=point.baseline_mm,
             current_distance_mm=point.baseline_mm,
             delta_opening_mm=0.0,
+            crack_id="CRACK-W01",
+            scene_type="wall_crack_recheck",
+            baseline_crack_width_mm=8.0,
+            opening_delta_mm=0.0,
+            shear_delta_mm=0.0,
+            out_of_plane_delta_mm=0.0,
+            measurement_mode="planar_rectified_2d",
+            detector_type="opencv_aruco_apriltag_36h11",
+            data_provenance=json.dumps(DEMO_PROVENANCE, ensure_ascii=False),
             quality_score=1.0,
             measurement_status="confirmed",
             human_confirmed=True,
             location_match=True,
             location_mode="demo",
+            photo_original=original_url,
             photo_rectified=rectified_url,
-            quality_reasons="[]",
-            remark="演示基线；非野外实测。",
+            photo_overlay=overlay_url,
+            quality_reasons=json.dumps({"reasons": [], "metrics": baseline_metrics}, ensure_ascii=False),
+            remark="首次人工建档开度 8.0 mm；公开场景复原与受控仿真，非真实监测记录。",
         )
     )
     session.commit()

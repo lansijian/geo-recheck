@@ -5,9 +5,11 @@ from dataclasses import dataclass
 import numpy as np
 
 
-BOARD_SIZE_MM = 120.0
-MARKER_SIZE_MM = 40.0
-MARKER_INSET_MM = 10.0
+BOARD_WIDTH_MM = 100.0
+BOARD_HEIGHT_MM = 60.0
+MARKER_SIZE_MM = 20.0
+MARKER_X_MM = (5.0, 75.0)
+MARKER_Y_MM = (4.0, 36.0)
 
 
 @dataclass(frozen=True)
@@ -20,8 +22,8 @@ class BoardSpec:
         index = self.marker_ids.index(marker_id)
         col = index % 2
         row = index // 2
-        x0 = -BOARD_SIZE_MM / 2 + MARKER_INSET_MM + col * 60.0
-        y0 = -BOARD_SIZE_MM / 2 + MARKER_INSET_MM + row * 60.0
+        x0 = -BOARD_WIDTH_MM / 2 + MARKER_X_MM[col]
+        y0 = -BOARD_HEIGHT_MM / 2 + MARKER_Y_MM[row]
         x1 = x0 + MARKER_SIZE_MM
         y1 = y0 + MARKER_SIZE_MM
         return np.asarray(
@@ -31,9 +33,15 @@ class BoardSpec:
 
     @property
     def outer_corners_mm(self) -> np.ndarray:
-        half = BOARD_SIZE_MM / 2
+        half_width = BOARD_WIDTH_MM / 2
+        half_height = BOARD_HEIGHT_MM / 2
         return np.asarray(
-            [[-half, -half], [half, -half], [half, half], [-half, half]],
+            [
+                [-half_width, -half_height],
+                [half_width, -half_height],
+                [half_width, half_height],
+                [-half_width, half_height],
+            ],
             dtype=np.float32,
         )
 
@@ -47,4 +55,3 @@ def board_for_marker(marker_id: int) -> BoardSpec | None:
         if marker_id in board.marker_ids:
             return board
     return None
-

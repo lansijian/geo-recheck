@@ -32,6 +32,12 @@ export type QualityMetrics = {
   min_marker_edge_px?: number;
   view_angle_deg?: number | null;
   reprojection_rmse_px?: number | null;
+  homography_rmse_mm?: number | null;
+  homography_spread_mm?: number | null;
+  planar_position_mm?: number[] | null;
+  dual_pnp_position_mm?: number[] | null;
+  legacy_board_center_distance_mm?: number | null;
+  processing_ms?: number | null;
 };
 
 export type Measurement = Point & {
@@ -41,6 +47,23 @@ export type Measurement = Point & {
   previous_distance_mm: number | null;
   current_distance_mm: number | null;
   delta_mm: number | null;
+  crack_id: string;
+  scene_type: string;
+  baseline_crack_width_mm: number | null;
+  opening_delta_mm: number | null;
+  shear_delta_mm: number | null;
+  out_of_plane_delta_mm: number | null;
+  measurement_mode: string;
+  detector_type: string;
+  data_provenance: {
+    story: string;
+    story_source: string;
+    wall_dataset: string;
+    wall_source: string;
+    license: string;
+    deformation: string;
+    is_real_guizhou_monitoring_data: boolean;
+  };
   quality_score: number;
   status: string;
   human_confirmed: boolean;
@@ -49,7 +72,7 @@ export type Measurement = Point & {
   quality_reasons: string[];
   quality_metrics?: QualityMetrics;
   evidence: Evidence;
-  previous_evidence?: { rectified: string | null; capture_time: string } | null;
+  previous_evidence?: { original: string | null; rectified: string | null; capture_time: string } | null;
   camera_profile?: { name: string; is_demo_profile: boolean };
   marker_ids?: number[];
   remark?: string | null;

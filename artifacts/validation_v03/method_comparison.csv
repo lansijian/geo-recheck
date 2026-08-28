@@ -1,0 +1,3 @@
+﻿method,total_cases,successful_cases,failure_rate,mae_opening_mm,median_error_mm,p95_error_mm,variance_mm2,median_processing_ms,p95_processing_ms
+planar_rectified_2d,58,58,0.0,0.495623,0.473869,1.001913,0.076521,42.191,51.336
+dual_pnp_3d,58,58,0.0,0.680243,0.366402,2.282313,0.617632,42.191,51.336

@@ -97,3 +97,10 @@ def estimate_board_pose(
 
 def relative_distance_mm(left: BoardPose, right: BoardPose) -> float:
     return float(np.linalg.norm(right.tvec.reshape(3) - left.tvec.reshape(3)))
+
+
+def relative_transform_mm(left: BoardPose, right: BoardPose) -> np.ndarray:
+    """Return the right-board origin expressed in the left-board frame."""
+    left_rotation, _ = cv2.Rodrigues(left.rvec)
+    camera_delta = right.tvec.reshape(3) - left.tvec.reshape(3)
+    return (left_rotation.T @ camera_delta).astype(np.float64)

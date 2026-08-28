@@ -1,0 +1,42 @@
+{
+  "methods": [
+    {
+      "method": "planar_rectified_2d",
+      "total_cases": 58,
+      "successful_cases": 58,
+      "failure_rate": 0.0,
+      "mae_opening_mm": 0.495623,
+      "median_error_mm": 0.473869,
+      "p95_error_mm": 1.001913,
+      "variance_mm2": 0.076521,
+      "median_processing_ms": 42.191,
+      "p95_processing_ms": 51.336
+    },
+    {
+      "method": "dual_pnp_3d",
+      "total_cases": 58,
+      "successful_cases": 58,
+      "failure_rate": 0.0,
+      "mae_opening_mm": 0.680243,
+      "median_error_mm": 0.366402,
+      "p95_error_mm": 2.282313,
+      "variance_mm2": 0.617632,
+      "median_processing_ms": 42.191,
+      "p95_processing_ms": 51.336
+    }
+  ],
+  "baseline_positions_mm": {
+    "planar_rectified_2d": 159.724037,
+    "dual_pnp_3d": 159.859716
+  },
+  "quality_gate": {
+    "correct_cases": 66,
+    "total_cases": 66,
+    "accuracy": 1.0
+  },
+  "selected_for_golden_path": "planar_rectified_2d",
+  "detector": "opencv_aruco_apriltag_36h11",
+  "native_apriltag_benchmark": "not_run_p2",
+  "claim_boundary": "Controlled synthetic wall-plane benchmark only; not field accuracy evidence.",
+  "data_provenance": "Özgenel CC BY 4.0 source texture; deformation and millimetre scale are synthetic."
+}

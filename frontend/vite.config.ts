@@ -10,6 +10,7 @@ export default defineConfig({
       "/media": "http://127.0.0.1:8000",
       "/evidence": "http://127.0.0.1:8000",
       "/demo-assets": "http://127.0.0.1:8000",
+      "/wall-assets": "http://127.0.0.1:8000",
       "/calibration-assets": "http://127.0.0.1:8000",
     },
   },

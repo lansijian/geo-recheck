@@ -19,7 +19,7 @@ import numpy as np
 
 from app.config import BENCHMARK_ROOT, CAMERA_PROFILE_PATH, EVIDENCE_ROOT, PROJECT_ROOT
 from app.cv.calibration import calibrate_camera
-from app.db.session import Base, SessionLocal, engine, get_db
+from app.db.session import Base, SessionLocal, engine, get_db, migrate_schema
 from app.models import BenchmarkTrial, Inspection, MonitorPoint
 from app.services.inspection import (
     create_measurement,
@@ -36,6 +36,7 @@ logger = logging.getLogger("uvicorn.error")
 async def lifespan(_: FastAPI):
     EVIDENCE_ROOT.mkdir(parents=True, exist_ok=True)
     Base.metadata.create_all(bind=engine)
+    migrate_schema()
     with SessionLocal() as session:
         seed_points(session)
         seed_baseline(session)
@@ -44,8 +45,8 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="地灾复测 API",
-    version="0.2.0",
-    description="基层地灾视觉复测与自动留痕系统。不是预测或自动预警平台。",
+    version="0.3.0",
+    description="贵州基层墙体裂缝相对复测与自动留痕电脑 Demo。不是预测、预警或业务管理平台。",
     lifespan=lifespan,
 )
 app.add_middleware(
@@ -61,6 +62,11 @@ app.mount(
     "/demo-assets",
     StaticFiles(directory=BENCHMARK_ROOT / "images", check_dir=False),
     name="demo-assets",
+)
+app.mount(
+    "/wall-assets",
+    StaticFiles(directory=PROJECT_ROOT / "data" / "wall_demo" / "images", check_dir=False),
+    name="wall-assets",
 )
 app.mount(
     "/calibration-assets",
@@ -84,7 +90,7 @@ class BenchmarkTrialPayload(BaseModel):
 
 @app.get("/api/health")
 def health() -> dict:
-    return {"status": "ok", "service": "geo-recheck", "version": "0.2.0"}
+    return {"status": "ok", "service": "geo-recheck", "version": "0.3.0"}
 
 
 @app.get("/api/calibration/profile")
@@ -207,7 +213,26 @@ def get_inspection(inspection_id: str, session: Session = Depends(get_db)) -> di
     if inspection is None:
         raise HTTPException(404, "复测记录不存在。")
     point = session.get(MonitorPoint, inspection.monitor_point_id)
-    return inspection_to_dict(inspection, point)
+    payload = inspection_to_dict(inspection, point)
+    previous = session.scalar(
+        select(Inspection)
+        .where(
+            Inspection.monitor_point_id == inspection.monitor_point_id,
+            Inspection.human_confirmed.is_(True),
+            Inspection.capture_time < inspection.capture_time,
+        )
+        .order_by(desc(Inspection.capture_time))
+    )
+    payload["previous_evidence"] = (
+        {
+            "original": previous.photo_original,
+            "rectified": previous.photo_rectified,
+            "capture_time": previous.capture_time.isoformat(),
+        }
+        if previous
+        else None
+    )
+    return payload
 
 
 @app.get("/api/points/{monitor_point_id}/history")

@@ -1,14 +1,14 @@
 # V0.2 最终测试记录
 
 执行日期：2026-08-28  
-环境：Windows 11；Python 固定为 `D:\Anaconda\_envs\PulseWeave\Scripts\python.exe`。
+环境：Windows 11；Python 使用开发者指定的隔离 Python 3.11 环境。
 
 ## pytest
 
 命令：
 
 ```bat
-D:\Anaconda\_envs\PulseWeave\Scripts\python.exe -m pytest -q
+%GEORECHECK_PYTHON% -m pytest -q
 ```
 
 实际结果：`5 passed, 1 warning in 2.42s`。

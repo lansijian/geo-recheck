@@ -1,4 +1,5 @@
 __pycache__/
+.venv/
 *.py[cod]
 *.egg-info/
 .pytest_cache/
@@ -18,6 +19,8 @@ artifacts/browser/
 artifacts/markers/
 artifacts/calibration/
 artifacts/validation/evidence/
+artifacts/validation_v03/evidence/
 artifacts/playwright/
 artifacts/playwright-report/
+artifacts/ui_v03/
 artifacts/ui_audit/v01_*.png

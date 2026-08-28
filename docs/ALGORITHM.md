@@ -1,41 +1,50 @@
-# 算法与工程边界
+# V0.3 算法与工程边界
 
-## 测量对象
+## 用户测量语义
 
-V0.1 不让模型猜裂缝边缘宽度。裂缝两侧各固定一块 120 × 120 mm 视觉板，每块板含四个 40 × 40 mm AprilTag。系统测量的是左右视觉板坐标原点之间的相对距离：
+V0.3 不再把左右板中心绝对距离作为用户结果。主结果是右侧复测贴相对左侧固定复测贴、相较上一期人工确认记录的变化：
 
 ```text
-D_t = || t_right - t_left ||
-delta = D_t - D_previous
+opening_delta_mm = x_current - x_baseline
+shear_delta_mm   = y_current - y_baseline
 ```
 
-`t_left` 和 `t_right` 分别来自同一张照片中两块板的独立 PnP 位姿。图像正视化只用于证据展示，不作为毫米比例尺硬算。
+X 轴沿左右复测贴连线方向，近似裂缝法向。首次建档裂缝开度 8.0 mm 只是受控演示值，不来自公开图片的真实尺度。板中心绝对距离只保留为折叠技术诊断。
 
-## 主链路
+## 主方法：planar_rectified_2d
 
-1. 根据相机配置执行 `cv2.undistort`；
-2. OpenCV AprilTag dictionary 检测与 `cornerSubPix` 亚像素优化；
-3. 301–304 / 305–308 marker group 自动匹配 `MP-03`；
-4. 每块板分别尝试 `SOLVEPNP_IPPE` 和 `SOLVEPNP_ITERATIVE`；
-5. 以重投影 RMSE 选择本次更稳的有效解；
-6. 计算两个板中心平移向量的欧氏距离；
-7. 与上一期人工确认值比较；
-8. 输出原图、去畸变图、检测叠加图和左右板正视化图；
-9. 人工确认后才写成正式记录。
+墙面、裂缝和两张复测贴近似共面。系统用左贴已知 100 × 60 mm 几何、相机内参和左贴姿态建立 `image → left sticker plane (mm)` 的 metric homography，再把右贴四个标记中心投影到同一平面。右贴中心由多个候选点的中位数估计，并记录 homography RMSE 与候选点离散度。
+
+此方法直接输出张开和剪切，墙面正视化也使用同一个映射，不把 PnP 深度噪声混进用户语义。
+
+## A/B 方法：dual_pnp_3d
+
+V0.2 Dual PnP 未删除。左右贴分别求解：
+
+```text
+T_C_L
+T_C_R
+T_L_R = inverse(T_C_L) @ T_C_R
+```
+
+输出右贴原点在左贴坐标系中的 `delta_x / delta_y / delta_z`，而不是旧的 `norm(t_right - t_left)`。批量验证会分别报告 planar 与 PnP 的 MAE、median、P95、variance、failure rate 和处理时间。
+
+## 检测器策略
+
+统一接口为 `FiducialDetector.detect()`，当前稳定默认实现是 `OpenCVArucoDetector`，字典为 AprilTag 36h11。Native AprilTag 3 属于 P2 独立 benchmark；没有证据证明更好前不切换 Windows 主链路。
 
 ## 质量门控
 
-以下情况拒绝确认：任一侧少于 3 个 marker、Laplacian 清晰度低、最小 marker 边长低于阈值、画面严重过曝/欠曝、板法线视角超过 35°、重投影 RMSE 超过 2 px。历史差异超过 `max(50 mm, 上期值 × 25%)` 时清空本次可确认毫米值并要求重拍或卷尺复核。
+以下情况拒绝确认：任一侧识别不足 3 个标记、图像模糊、标记过小、严重曝光异常、视角超过阈值、PnP 重投影不稳定、metric homography 或右贴候选点离散度异常。未确认和被拒绝结果都不能成为下一期 baseline。
 
-GPS 不是点位身份来源。Marker ID 是主身份；浏览器定位或演示坐标只做二次校验。位置相差超过 100 m 只警告，不自动判断灾害状态。
+## 可选 AI
 
-## 相机标定
+`ENABLE_CRACK_AI=false`。AI 裂缝分割本轮不参与毫米测量、质量门控或风险判断；P0/P1 稳定前不接入主链路。
 
-`/calibration` 使用 7 × 5 ChArUco 板。至少上传 10 张同分辨率图片，并要求至少 8 张识别到 10 个以上角点。标定重投影误差超过 2 px 时拒绝覆盖 `data/camera_profiles/default_camera.json`。
+## 声明边界
 
-当前仓库默认配置标注为 `is_demo_profile: true`。在真实相机标定和已知位移实拍验证前，不允许作现场毫米精度声明。
-
-## 非目标
-
-不做裂缝语义 AI 决策、滑坡概率、风险等级、自动预警撤离、GIS 大屏、聊天机器人或现有地灾平台替代品。
-
+- 真实岗位和动作来自贵州公开报道；
+- 墙体图片来自 Özgenel CC BY 4.0 公开数据集；
+- 毫米尺度和位移来自同一墙面平面内的受控仿真；
+- 仿真结果不是贵州真实监测数据，也不是野外精度证明；
+- 系统不预测滑坡、不输出风险等级、不触发撤离。

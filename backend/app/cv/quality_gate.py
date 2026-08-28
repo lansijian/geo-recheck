@@ -33,7 +33,7 @@ def assess_quality(
     right_pose: BoardPose | None,
     *,
     blur_threshold: float = 80.0,
-    marker_edge_threshold: float = 28.0,
+    marker_edge_threshold: float = 24.0,
     max_view_angle_deg: float = 35.0,
     max_reprojection_rmse_px: float = 2.0,
 ) -> QualityReport:
@@ -79,4 +79,3 @@ def assess_quality(
         )
     )
     return QualityReport(not reasons, score, blur, clipping, min_edge, reasons)
-

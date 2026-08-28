@@ -1,0 +1,41 @@
+[
+  {
+    "scene_id": "wall_scene_001",
+    "dataset": "Özgenel Concrete Crack Segmentation Dataset",
+    "source_file": "data/datasets/ozgenel/rgb/328.jpg",
+    "mask_file": "data/datasets/ozgenel/BW/328.jpg",
+    "source_url": "https://data.mendeley.com/datasets/jwsn7tfbrp/1",
+    "doi": "10.17632/jwsn7tfbrp.1",
+    "license": "CC BY 4.0",
+    "usage": "controlled synthetic hackathon demo",
+    "is_real_guizhou_monitoring_data": false,
+    "is_golden_path": true,
+    "selection_score": 5.37417
+  },
+  {
+    "scene_id": "wall_scene_002",
+    "dataset": "Özgenel Concrete Crack Segmentation Dataset",
+    "source_file": "data/datasets/ozgenel/rgb/529.JPG",
+    "mask_file": "data/datasets/ozgenel/BW/529.jpg",
+    "source_url": "https://data.mendeley.com/datasets/jwsn7tfbrp/1",
+    "doi": "10.17632/jwsn7tfbrp.1",
+    "license": "CC BY 4.0",
+    "usage": "controlled synthetic hackathon demo",
+    "is_real_guizhou_monitoring_data": false,
+    "is_golden_path": false,
+    "selection_score": 5.33544
+  },
+  {
+    "scene_id": "wall_scene_003",
+    "dataset": "Özgenel Concrete Crack Segmentation Dataset",
+    "source_file": "data/datasets/ozgenel/rgb/417.JPG",
+    "mask_file": "data/datasets/ozgenel/BW/417.jpg",
+    "source_url": "https://data.mendeley.com/datasets/jwsn7tfbrp/1",
+    "doi": "10.17632/jwsn7tfbrp.1",
+    "license": "CC BY 4.0",
+    "usage": "controlled synthetic hackathon demo",
+    "is_real_guizhou_monitoring_data": false,
+    "is_golden_path": false,
+    "selection_score": 5.27666
+  }
+]

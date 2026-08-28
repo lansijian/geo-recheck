@@ -8,10 +8,11 @@ import numpy as np
 
 from .board_geometry import DEMO_LEFT, DEMO_RIGHT
 from .image_io import write_image
-from .marker_detector import detect_markers
-from .pose_estimation import estimate_board_pose, relative_distance_mm
+from .marker_detector import DEFAULT_DETECTOR
+from .planar_measurement import measure_planar_relative
+from .pose_estimation import estimate_board_pose, relative_distance_mm, relative_transform_mm
 from .quality_gate import QualityReport, assess_quality
-from .rectification import compose_rectified, rectify_board
+from .rectification import compose_rectified, rectify_board, rectify_wall_plane
 
 
 @dataclass
@@ -22,6 +23,12 @@ class MeasurementResult:
     quality: QualityReport
     left_pose: dict | None
     right_pose: dict | None
+    planar_position_mm: list[float] | None
+    dual_pnp_position_mm: list[float] | None
+    homography_rmse_mm: float | None
+    homography_spread_mm: float | None
+    measurement_mode: str
+    detector_type: str
 
     def as_dict(self) -> dict:
         result = asdict(self)
@@ -48,11 +55,23 @@ def measure_image(
     output_dir: Path | None = None,
 ) -> MeasurementResult:
     undistorted = cv2.undistort(image, camera_matrix, distortion)
-    detection = detect_markers(undistorted)
+    detection = DEFAULT_DETECTOR.detect(undistorted)
     left = estimate_board_pose(DEMO_LEFT, detection.corners_by_id, camera_matrix, distortion)
     right = estimate_board_pose(DEMO_RIGHT, detection.corners_by_id, camera_matrix, distortion)
     quality = assess_quality(undistorted, detection.corners_by_id, left, right)
+    planar = measure_planar_relative(
+        detection.corners_by_id,
+        left_pose=left,
+        camera_matrix=camera_matrix,
+    )
+    if quality.accepted and planar is None:
+        quality.accepted = False
+        quality.reasons.append("墙面正视化失败，请完整拍摄左右复测贴。")
+    elif planar and (planar.homography_rmse_mm > 0.8 or planar.right_point_spread_mm > 1.5):
+        quality.accepted = False
+        quality.reasons.append("墙面几何对齐不稳定，请重新拍摄。")
     distance = relative_distance_mm(left, right) if quality.accepted and left and right else None
+    dual_pnp = relative_transform_mm(left, right) if quality.accepted and left and right else None
 
     if output_dir:
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -74,7 +93,13 @@ def measure_image(
             write_image(output_dir / "rectified_left.png", left_rect)
         if right_rect is not None:
             write_image(output_dir / "rectified_right.png", right_rect)
-        write_image(output_dir / "rectified.png", compose_rectified(left_rect, right_rect))
+        if planar is not None:
+            write_image(
+                output_dir / "rectified.png",
+                rectify_wall_plane(undistorted, planar.image_to_left_plane),
+            )
+        else:
+            write_image(output_dir / "rectified.png", compose_rectified(left_rect, right_rect))
 
     return MeasurementResult(
         status="accepted" if quality.accepted else "rejected",
@@ -83,4 +108,10 @@ def measure_image(
         quality=quality,
         left_pose=_pose_dict(left),
         right_pose=_pose_dict(right),
+        planar_position_mm=(planar.right_center_mm.tolist() if quality.accepted and planar else None),
+        dual_pnp_position_mm=dual_pnp.tolist() if dual_pnp is not None else None,
+        homography_rmse_mm=planar.homography_rmse_mm if planar else None,
+        homography_spread_mm=planar.right_point_spread_mm if planar else None,
+        measurement_mode="planar_rectified_2d",
+        detector_type=DEFAULT_DETECTOR.detector_type,
     )

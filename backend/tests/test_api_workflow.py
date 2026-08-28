@@ -1,10 +1,20 @@
 import cv2
 from fastapi.testclient import TestClient
+from sqlalchemy import delete
 
 from app.cv.synthetic import SyntheticCase, render_case
 from app.db.session import SessionLocal
 from app.main import app
 from app.models import BenchmarkTrial, Inspection
+from app.services.inspection import seed_baseline
+
+
+def reset_measurement_baseline() -> None:
+    """Keep this stateful API test independent of earlier confirmed demo runs."""
+    with SessionLocal() as session:
+        session.execute(delete(Inspection))
+        session.commit()
+        seed_baseline(session)
 
 
 def test_measure_confirm_and_history_workflow() -> None:
@@ -17,6 +27,7 @@ def test_measure_confirm_and_history_workflow() -> None:
         with TestClient(app) as client:
             health = client.get("/api/health")
             assert health.status_code == 200
+            reset_measurement_baseline()
 
             measured = client.post(
                 "/api/measure",
@@ -28,7 +39,10 @@ def test_measure_confirm_and_history_workflow() -> None:
             assert payload["monitor_point_id"] == "MP-03"
             assert payload["status"] == "pending"
             assert payload["location_mode"] == "demo"
-            assert payload["current_distance_mm"] is not None
+            assert payload["opening_delta_mm"] is not None
+            assert 4.0 <= payload["opening_delta_mm"] <= 6.0
+            assert payload["crack_id"] == "CRACK-W01"
+            assert payload["measurement_mode"] == "planar_rectified_2d"
 
             confirmed = client.post(
                 f"/api/inspections/{payload['id']}/confirm",

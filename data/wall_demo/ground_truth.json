@@ -1,0 +1,288 @@
+{
+  "description": "Coherent single-wall-plane controlled simulation; millimetre scale belongs to the simulator, not the source dataset.",
+  "data_provenance": "public CC BY building crack image + deterministic controlled deformation",
+  "cases": [
+    {
+      "name": "baseline_front",
+      "opening_delta_mm": 0.0,
+      "shear_delta_mm": 0.0,
+      "ground_truth_mm": 160.0,
+      "legacy_ground_truth_board_distance_mm": 160.0,
+      "yaw_deg": 0.0,
+      "pitch_deg": 0.0,
+      "brightness": 1.0,
+      "blur_sigma": 0.0,
+      "occlusion": "none",
+      "expected_gate": "accepted",
+      "camera_homography": [
+        [
+          0.8337502300649836,
+          -1.3388109326932937e-17,
+          126.66666412353516
+        ],
+        [
+          1.421796369705053e-19,
+          0.8340283569641367,
+          40.0
+        ],
+        [
+          3.554490924262632e-21,
+          -1.0667029755626228e-19,
+          1.0
+        ]
+      ],
+      "background_source": "data/datasets/ozgenel/rgb/328.jpg",
+      "canonical_size_px": [
+        2000,
+        1200
+      ],
+      "synthetic_scale_px_per_mm": 2.0,
+      "baseline_crack_width_mm": 8.0,
+      "baseline_right_center_mm": [
+        160.0,
+        0.0
+      ],
+      "current_right_center_mm": [
+        160.0,
+        0.0
+      ],
+      "coherent_plane": true,
+      "image": "images/baseline_front.png"
+    },
+    {
+      "name": "current_open_2mm_front",
+      "opening_delta_mm": 2.0,
+      "shear_delta_mm": 0.0,
+      "ground_truth_mm": 162.0,
+      "legacy_ground_truth_board_distance_mm": 162.0,
+      "yaw_deg": 0.0,
+      "pitch_deg": 0.0,
+      "brightness": 1.0,
+      "blur_sigma": 0.0,
+      "occlusion": "none",
+      "expected_gate": "accepted",
+      "camera_homography": [
+        [
+          0.8337502300649836,
+          -1.3388109326932937e-17,
+          126.66666412353516
+        ],
+        [
+          1.421796369705053e-19,
+          0.8340283569641367,
+          40.0
+        ],
+        [
+          3.554490924262632e-21,
+          -1.0667029755626228e-19,
+          1.0
+        ]
+      ],
+      "background_source": "data/datasets/ozgenel/rgb/328.jpg",
+      "canonical_size_px": [
+        2000,
+        1200
+      ],
+      "synthetic_scale_px_per_mm": 2.0,
+      "baseline_crack_width_mm": 8.0,
+      "baseline_right_center_mm": [
+        160.0,
+        0.0
+      ],
+      "current_right_center_mm": [
+        162.0,
+        0.0
+      ],
+      "coherent_plane": true,
+      "image": "images/current_open_2mm_front.png"
+    },
+    {
+      "name": "current_open_5mm_yaw20",
+      "opening_delta_mm": 5.0,
+      "shear_delta_mm": 0.5,
+      "ground_truth_mm": 165.0,
+      "legacy_ground_truth_board_distance_mm": 165.0,
+      "yaw_deg": 20.0,
+      "pitch_deg": 10.0,
+      "brightness": 1.0,
+      "blur_sigma": 0.0,
+      "occlusion": "none",
+      "expected_gate": "accepted",
+      "camera_homography": [
+        [
+          0.5346415605812271,
+          0.08208130374847544,
+          266.5460205078125
+        ],
+        [
+          -0.04567699640790996,
+          0.7735239248477838,
+          60.123558044433594
+        ],
+        [
+          -0.0001657909694472101,
+          8.550135221508809e-05,
+          1.0
+        ]
+      ],
+      "background_source": "data/datasets/ozgenel/rgb/328.jpg",
+      "canonical_size_px": [
+        2000,
+        1200
+      ],
+      "synthetic_scale_px_per_mm": 2.0,
+      "baseline_crack_width_mm": 8.0,
+      "baseline_right_center_mm": [
+        160.0,
+        0.0
+      ],
+      "current_right_center_mm": [
+        165.0,
+        0.5
+      ],
+      "coherent_plane": true,
+      "image": "images/current_open_5mm_yaw20.png"
+    },
+    {
+      "name": "current_open_5mm_yaw30",
+      "opening_delta_mm": 5.0,
+      "shear_delta_mm": 0.5,
+      "ground_truth_mm": 165.0,
+      "legacy_ground_truth_board_distance_mm": 165.0,
+      "yaw_deg": 30.0,
+      "pitch_deg": 12.0,
+      "brightness": 1.0,
+      "blur_sigma": 0.0,
+      "occlusion": "none",
+      "expected_gate": "accepted",
+      "camera_homography": [
+        [
+          0.3834644035268757,
+          0.09229739413496074,
+          359.7957763671875
+        ],
+        [
+          -0.0500017817501639,
+          0.73039392754714,
+          61.206031799316406
+        ],
+        [
+          -0.00022608343985040726,
+          9.614315761645033e-05,
+          1.0
+        ]
+      ],
+      "background_source": "data/datasets/ozgenel/rgb/328.jpg",
+      "canonical_size_px": [
+        2000,
+        1200
+      ],
+      "synthetic_scale_px_per_mm": 2.0,
+      "baseline_crack_width_mm": 8.0,
+      "baseline_right_center_mm": [
+        160.0,
+        0.0
+      ],
+      "current_right_center_mm": [
+        165.0,
+        0.5
+      ],
+      "coherent_plane": true,
+      "image": "images/current_open_5mm_yaw30.png"
+    },
+    {
+      "name": "current_blur_reject",
+      "opening_delta_mm": 5.0,
+      "shear_delta_mm": 0.5,
+      "ground_truth_mm": 165.0,
+      "legacy_ground_truth_board_distance_mm": 165.0,
+      "yaw_deg": 10.0,
+      "pitch_deg": 5.0,
+      "brightness": 1.0,
+      "blur_sigma": 7.0,
+      "occlusion": "none",
+      "expected_gate": "rejected",
+      "camera_homography": [
+        [
+          0.6829821065971837,
+          0.043598463325929065,
+          190.8969268798828
+        ],
+        [
+          -0.03683403783271204,
+          0.8031689357469004,
+          61.3829460144043
+        ],
+        [
+          -9.011012482623509e-05,
+          4.541507726001391e-05,
+          1.0
+        ]
+      ],
+      "background_source": "data/datasets/ozgenel/rgb/328.jpg",
+      "canonical_size_px": [
+        2000,
+        1200
+      ],
+      "synthetic_scale_px_per_mm": 2.0,
+      "baseline_crack_width_mm": 8.0,
+      "baseline_right_center_mm": [
+        160.0,
+        0.0
+      ],
+      "current_right_center_mm": [
+        165.0,
+        0.5
+      ],
+      "coherent_plane": true,
+      "image": "images/current_blur_reject.png"
+    },
+    {
+      "name": "current_occlusion_reject",
+      "opening_delta_mm": 5.0,
+      "shear_delta_mm": 0.5,
+      "ground_truth_mm": 165.0,
+      "legacy_ground_truth_board_distance_mm": 165.0,
+      "yaw_deg": 10.0,
+      "pitch_deg": 5.0,
+      "brightness": 1.0,
+      "blur_sigma": 0.0,
+      "occlusion": "right_two",
+      "expected_gate": "rejected",
+      "camera_homography": [
+        [
+          0.6829821065971837,
+          0.043598463325929065,
+          190.8969268798828
+        ],
+        [
+          -0.03683403783271204,
+          0.8031689357469004,
+          61.3829460144043
+        ],
+        [
+          -9.011012482623509e-05,
+          4.541507726001391e-05,
+          1.0
+        ]
+      ],
+      "background_source": "data/datasets/ozgenel/rgb/328.jpg",
+      "canonical_size_px": [
+        2000,
+        1200
+      ],
+      "synthetic_scale_px_per_mm": 2.0,
+      "baseline_crack_width_mm": 8.0,
+      "baseline_right_center_mm": [
+        160.0,
+        0.0
+      ],
+      "current_right_center_mm": [
+        165.0,
+        0.5
+      ],
+      "coherent_plane": true,
+      "image": "images/current_occlusion_reject.png"
+    }
+  ]
+}
