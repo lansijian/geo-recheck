@@ -45,7 +45,7 @@ test("首页先讲真实监测员与每天巡查至少三次", async ({ page }) 
   await expect(page.getByRole("heading", { name: /每天至少巡查 3 次/ })).toBeVisible();
   await expect(page.getByText("丈量墙缝、比对每日数据、看现场变化，再填写巡查台账", { exact: false })).toBeVisible();
   await expect(page.getByText("几何算法负责“量”", { exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: "开始 60 秒比赛展示" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "开始 60 秒现场巡查" })).toBeVisible();
   expect(failures).toEqual([]);
 });
 

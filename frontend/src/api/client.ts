@@ -1,4 +1,5 @@
 import type { AIReview, AIStatus, BenchmarkSummary, DemoCase, Measurement, Point, PointCreatePayload } from "../types";
+import type { ShowcaseCase } from "../components/showcase/showcaseData";
 
 async function parseResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
@@ -105,6 +106,10 @@ export async function getDemoCases(): Promise<DemoCase[]> {
   return parseResponse<DemoCase[]>(await fetch("/api/demo-cases"));
 }
 
+export async function getShowcaseCases(): Promise<ShowcaseCase[]> {
+  return parseResponse<ShowcaseCase[]>(await fetch("/api/showcase/cases"));
+}
+
 export async function getAIStatus(): Promise<AIStatus> {
   return parseResponse<AIStatus>(await fetch("/api/ai/status"));
 }
@@ -129,6 +134,16 @@ export async function runAIReview(id: string, caseId?: string): Promise<AIReview
   } finally {
     globalThis.clearTimeout(timeout);
   }
+}
+
+export async function replayAIReview(id: string, caseId: string): Promise<AIReview> {
+  return parseResponse<AIReview>(
+    await fetch(`/api/inspections/${id}/ai-review/replay`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ case_id: caseId }),
+    }),
+  );
 }
 
 export async function decideAIReviewItem(

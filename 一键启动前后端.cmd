@@ -1,6 +1,6 @@
 @echo off
 setlocal EnableExtensions
-title GeoRecheck V0.5 - Frontend and Backend
+title GeoRecheck V0.6 - Frontend and Backend
 
 cd /d "%~dp0"
 set "GEORECHECK_PYTHON=D:\Anaconda\_envs\PulseWeave\Scripts\python.exe"

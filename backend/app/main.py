@@ -33,6 +33,7 @@ from app.services.ai_review import (
     build_confirmed_record_text,
     decide_ai_review_item,
     latest_ai_review,
+    persist_replayed_ai_review,
     run_and_persist_ai_review,
 )
 from app.services.registry import (
@@ -61,7 +62,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="地灾复测 API",
-    version="0.4.0",
+    version="0.6.0",
     description="几何算法负责量，阶跃多模态负责看，监测员负责确认。不是风险预测或自动预警平台。",
     lifespan=lifespan,
 )
@@ -138,7 +139,7 @@ class AIReviewDecisionPayload(BaseModel):
 
 @app.get("/api/health")
 def health() -> dict:
-    return {"status": "ok", "service": "geo-recheck", "version": "0.4.0"}
+    return {"status": "ok", "service": "geo-recheck", "version": "0.6.0"}
 
 
 @app.get("/api/ai/status")
@@ -171,6 +172,16 @@ def list_demo_cases() -> list[dict]:
                 },
             }
         )
+    return cases
+
+
+@app.get("/api/showcase/cases")
+def list_showcase_cases() -> list[dict]:
+    cases: list[dict] = []
+    for case_dir in sorted(DEMO_CASES_ROOT.glob("case_*")):
+        showcase_path = case_dir / "showcase.json"
+        if showcase_path.is_file():
+            cases.append(json.loads(showcase_path.read_text(encoding="utf-8")))
     return cases
 
 
@@ -430,6 +441,21 @@ def run_ai_review(
         raise HTTPException(404, "复测记录不存在。")
     try:
         return run_and_persist_ai_review(session, inspection, payload.case_id)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+
+
+@app.post("/api/inspections/{inspection_id}/ai-review/replay")
+def replay_ai_review(
+    inspection_id: str,
+    payload: AIReviewPayload,
+    session: Session = Depends(get_db),
+) -> dict:
+    inspection = session.get(Inspection, inspection_id)
+    if inspection is None:
+        raise HTTPException(404, "复测记录不存在。")
+    try:
+        return persist_replayed_ai_review(session, inspection, payload.case_id)
     except ValueError as error:
         raise HTTPException(422, str(error)) from error
 

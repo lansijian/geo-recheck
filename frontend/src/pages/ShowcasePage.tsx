@@ -1,209 +1,169 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { confirmMeasurement, decideAIReviewItem, getAIStatus, measureImage, runAIReview } from "../api/client";
+import { confirmMeasurement, decideAIReviewItem, getShowcaseCases, measureImage, replayAIReview, runAIReview } from "../api/client";
 import PhoneFrame from "../components/showcase/PhoneFrame";
 import ShowcaseScene from "../components/showcase/ShowcaseScene";
 import ShowcaseSidebar from "../components/showcase/ShowcaseSidebar";
-import { SHOWCASE_CASES, SHOWCASE_STEPS, type ShowcaseCase } from "../components/showcase/showcaseData";
-import type { AIReview, AIStatus, Measurement } from "../types";
+import { FIELD_STEPS, PUBLIC_PHASES, type ShowcaseCase } from "../components/showcase/showcaseData";
+import type { AIReview, Measurement } from "../types";
 import "../showcase.css";
 
-type PlaybackMode = "showcase" | "live";
-type LiveState = "idle" | "measuring" | "reviewing" | "ready" | "failed";
+type AsyncState = "idle" | "running" | "ready" | "failed";
+type Decision = "pending" | "accepted" | "rejected";
+type CaptureKind = "context" | "closeup";
+
+const EXHIBITION_CASES = new Set(["case_03_seepage", "case_04_spalling", "case_05_quality_fail"]);
+const PLAYBACK_SPEED = import.meta.env.DEV && new URLSearchParams(window.location.search).get("speed") === "fast" ? 0.02 : 1;
 
 export default function ShowcasePage() {
   const navigate = useNavigate();
-  const [activeCaseId, setActiveCaseId] = useState<ShowcaseCase["id"]>("case_03_seepage");
-  const [mode, setMode] = useState<PlaybackMode>("showcase");
+  const [cases, setCases] = useState<ShowcaseCase[]>([]);
+  const [activeCaseId, setActiveCaseId] = useState("case_03_seepage");
   const [stepIndex, setStepIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const [decision, setDecision] = useState<"pending" | "accepted" | "rejected">("pending");
-  const [liveState, setLiveState] = useState<LiveState>("idle");
-  const [liveMessage, setLiveMessage] = useState("");
-  const [liveMeasurement, setLiveMeasurement] = useState<Measurement | null>(null);
-  const [liveReview, setLiveReview] = useState<AIReview | null>(null);
-  const [aiStatus, setAIStatus] = useState<AIStatus | null>(null);
-  const [recordId, setRecordId] = useState<string | null>(null);
-  const activeCase = useMemo(() => SHOWCASE_CASES.find((item) => item.id === activeCaseId) ?? SHOWCASE_CASES[0], [activeCaseId]);
-  const step = SHOWCASE_STEPS[stepIndex];
+  const [captures, setCaptures] = useState<{ context: string | null; closeup: string | null }>({ context: null, closeup: null });
+  const [captureTransfer, setCaptureTransfer] = useState<{ url: string; kind: CaptureKind; token: number } | null>(null);
+  const [measurement, setMeasurement] = useState<Measurement | null>(null);
+  const [review, setReview] = useState<AIReview | null>(null);
+  const [record, setRecord] = useState<Measurement | null>(null);
+  const [geometryState, setGeometryState] = useState<AsyncState>("idle");
+  const [replayState, setReplayState] = useState<AsyncState>("idle");
+  const [liveAIState, setLiveAIState] = useState<"idle" | "running" | "completed" | "failed">("idle");
+  const [processMessage, setProcessMessage] = useState("");
+  const [decision, setDecision] = useState<Decision>("pending");
+  const [observerName, setObserverName] = useState("");
+  const [remark, setRemark] = useState("");
+  const [error, setError] = useState("");
+  const geometryRun = useRef("");
+  const replayRun = useRef("");
+  const transferTimer = useRef<number | null>(null);
 
-  const resetRun = useCallback((nextStep = 0) => {
-    setPlaying(false);
-    setStepIndex(nextStep);
-    setDecision("pending");
-    setLiveState("idle");
-    setLiveMessage("");
-    setLiveMeasurement(null);
-    setLiveReview(null);
-    setRecordId(null);
-  }, []);
-
-  useEffect(() => {
-    void getAIStatus().then(setAIStatus).catch(() => setAIStatus(null));
-  }, []);
+  const activeCase = useMemo(() => cases.find((item) => item.case_id === activeCaseId) ?? cases[0], [activeCaseId, cases]);
+  const step = FIELD_STEPS[stepIndex];
+  const publicPhaseIndex = PUBLIC_PHASES.findIndex((phase) => phase.id === step.publicPhase);
 
   useEffect(() => {
-    resetRun();
-  }, [activeCaseId, mode, resetRun]);
+    void getShowcaseCases().then((items) => setCases(items.filter((item) => EXHIBITION_CASES.has(item.case_id)))).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Showcase 数据加载失败。"));
+    return () => { if (transferTimer.current) window.clearTimeout(transferTimer.current); };
+  }, []);
 
-  const runLiveProcessing = useCallback(async () => {
-    if (liveState !== "idle") return;
-    setLiveState("measuring");
-    setLiveMessage("正在运行 OpenCV 几何测量…");
+  const resetRun = useCallback(() => {
+    setPlaying(false); setStepIndex(0); setCaptures({ context: null, closeup: null }); setCaptureTransfer(null);
+    setMeasurement(null); setReview(null); setRecord(null); setGeometryState("idle"); setReplayState("idle"); setLiveAIState("idle");
+    setProcessMessage(""); setDecision("pending"); setObserverName(""); setRemark(""); setError("");
+    geometryRun.current = ""; replayRun.current = "";
+  }, []);
+
+  useEffect(() => { if (activeCase) resetRun(); }, [activeCase?.case_id, resetRun]);
+
+  const handleCapture = useCallback((kind: CaptureKind, dataUrl: string) => {
+    setCaptures((current) => ({ ...current, [kind]: dataUrl }));
+    setCaptureTransfer({ url: dataUrl, kind, token: Date.now() });
+    if (transferTimer.current) window.clearTimeout(transferTimer.current);
+    transferTimer.current = window.setTimeout(() => setCaptureTransfer(null), 1150);
+  }, []);
+
+  const runGeometry = useCallback(async () => {
+    if (!activeCase || geometryRun.current === activeCase.case_id) return;
+    geometryRun.current = activeCase.case_id;
+    setGeometryState("running"); setProcessMessage("正在将墙面近景送入本机 FastAPI / OpenCV…");
     try {
-      const imageResponse = await fetch(activeCase.current);
-      if (!imageResponse.ok) throw new Error("无法读取当前演示近景。");
-      const image = await imageResponse.blob();
-      const measurement = await measureImage(
-        new File([image], `${activeCase.id}_current.jpg`, { type: image.type || "image/jpeg" }),
-        undefined,
-        activeCase.id,
-      );
-      setLiveMeasurement(measurement);
-      if (measurement.status === "rejected") {
-        setLiveMessage("质量门控已拒绝毫米结果。");
-        setLiveState("ready");
-        return;
-      }
-      const status = aiStatus ?? await getAIStatus();
-      setAIStatus(status);
-      if (!status.enabled || !status.configured) {
-        setLiveMessage("几何已完成；StepFun 未启用，AI 复核已跳过。");
-        setLiveState("ready");
-        return;
-      }
-      setLiveState("reviewing");
-      setLiveMessage("几何已完成，正在等待 StepFun 三图复核…");
-      const review = await runAIReview(measurement.id, activeCase.id);
-      setLiveReview(review);
-      setLiveMessage(review.status === "completed" ? "几何与 AI 复核均已完成。" : "几何已完成；AI 复核未成功。");
-      setLiveState("ready");
-    } catch (error) {
-      setLiveMessage(error instanceof Error ? error.message : "实时处理失败。几何演示数据不受影响。");
-      setLiveState("failed");
-      setPlaying(false);
+      const response = await fetch(activeCase.assets.current_close);
+      if (!response.ok) throw new Error("无法读取 Canonical Field Scene 的裂缝证据纹理。");
+      const image = await response.blob();
+      const result = await measureImage(new File([image], `${activeCase.case_id}_current.jpg`, { type: image.type || "image/jpeg" }), undefined, activeCase.case_id);
+      setMeasurement(result); setGeometryState("ready");
+      setProcessMessage(result.status === "rejected" ? "质量门控已拒绝毫米输出；失败证据已写入 SQLite。" : `真实几何完成：${(result.opening_delta_mm ?? result.delta_mm ?? 0).toFixed(1)} mm。`);
+    } catch (reason) {
+      setGeometryState("failed"); setPlaying(false); setError(reason instanceof Error ? reason.message : "真实几何测量失败。");
     }
-  }, [activeCase, aiStatus, liveState]);
+  }, [activeCase]);
 
-  useEffect(() => {
-    if (mode === "live" && step.id === "processing" && liveState === "idle") {
-      void runLiveProcessing();
+  const runReplay = useCallback(async () => {
+    if (!activeCase || !measurement || replayRun.current === measurement.id) return;
+    replayRun.current = measurement.id;
+    setReplayState("running"); setProcessMessage("正在把已审计的 StepFun 成功响应写入本次 SQLite 记录…");
+    try {
+      const replay = await replayAIReview(measurement.id, activeCase.case_id);
+      setReview(replay); setReplayState("ready");
+      setProcessMessage(`AI 实测回放已落库：${activeCase.ai_replay.model}，原始 ${(activeCase.ai_replay.original_latency_ms / 1000).toFixed(1)} 秒。`);
+    } catch (reason) {
+      setReplayState("failed"); setPlaying(false); setError(reason instanceof Error ? reason.message : "AI 实测回放失败。");
     }
-  }, [liveState, mode, runLiveProcessing, step.id]);
+  }, [activeCase, measurement]);
 
-  const canAdvance = !(mode === "live" && step.id === "processing" && liveState !== "ready");
+  useEffect(() => { if (step.id === "geometry") void runGeometry(); }, [runGeometry, step.id]);
+  useEffect(() => { if (step.id === "ai_review" && geometryState === "ready") void runReplay(); }, [geometryState, runReplay, step.id]);
+
+  const canAdvance = useMemo(() => {
+    if (step.id === "capture_context") return Boolean(captures.context);
+    if (step.id === "capture_closeup") return Boolean(captures.closeup);
+    if (step.id === "geometry") return geometryState === "ready";
+    if (step.id === "ai_review") return replayState === "ready";
+    return step.id !== "human_confirm" && step.id !== "record";
+  }, [captures, geometryState, replayState, step.id]);
 
   const advance = useCallback(() => {
-    if (stepIndex >= SHOWCASE_STEPS.length - 1) {
-      setPlaying(false);
-      return;
-    }
-    if (mode === "live" && SHOWCASE_STEPS[stepIndex].id === "processing" && liveState !== "ready") return;
-    if (mode === "live" && SHOWCASE_STEPS[stepIndex + 1]?.id === "confirm") setPlaying(false);
-    setStepIndex((value) => Math.min(SHOWCASE_STEPS.length - 1, value + 1));
-  }, [liveState, mode, stepIndex]);
+    if (!canAdvance || stepIndex >= FIELD_STEPS.length - 1) return;
+    setStepIndex((value) => value + 1);
+  }, [canAdvance, stepIndex]);
 
   useEffect(() => {
-    if (!playing || step.id === "record") return;
-    if (mode === "live" && step.id === "processing" && liveState !== "ready") return;
-    if (mode === "live" && step.id === "confirm") {
-      setPlaying(false);
-      return;
-    }
-    const timer = window.setTimeout(() => {
-      if (step.id === "confirm" && decision === "pending") setDecision("accepted");
-      advance();
-    }, step.durationMs);
+    if (!playing) return;
+    if (step.id === "human_confirm" || step.id === "record") { setPlaying(false); return; }
+    if (!canAdvance) return;
+    const timer = window.setTimeout(advance, Math.max(40, step.durationMs * PLAYBACK_SPEED));
     return () => window.clearTimeout(timer);
-  }, [advance, decision, liveState, mode, playing, step]);
+  }, [advance, canAdvance, playing, step.durationMs, step.id]);
+
+  async function runLiveAI() {
+    if (!activeCase || !measurement || liveAIState === "running") return;
+    setLiveAIState("running"); setProcessMessage("正在运行实时 StepFun，预计 30–60 秒；几何结果不会被修改。");
+    try {
+      const live = await runAIReview(measurement.id, activeCase.case_id);
+      if (live.status !== "completed") throw new Error(live.error_message || "实时 AI 未成功完成。");
+      setReview(live); setLiveAIState("completed"); setProcessMessage("实时 StepFun 已完成，当前人工确认将使用实时结果。");
+    } catch (reason) {
+      setLiveAIState("failed"); setProcessMessage(reason instanceof Error ? `${reason.message} 几何和记录不受影响。` : "实时 AI 失败；几何和记录不受影响。");
+    }
+  }
 
   async function finishConfirmation() {
-    if (!activeCase.qualityPassed && mode === "showcase") {
-      setRecordId(activeCase.recordCode);
-      setStepIndex(SHOWCASE_STEPS.length - 1);
-      return;
-    }
-    if (mode === "showcase") {
-      if (decision === "pending") setDecision("accepted");
-      setRecordId(activeCase.recordCode);
-      setStepIndex(SHOWCASE_STEPS.length - 1);
-      return;
-    }
-    if (!liveMeasurement) return;
-    if (liveMeasurement.status === "rejected") {
-      setRecordId(liveMeasurement.id);
-      setStepIndex(SHOWCASE_STEPS.length - 1);
-      return;
-    }
-    setLiveMessage("正在保存人工决定并生成正式记录…");
+    if (!measurement || !observerName.trim() || !remark.trim()) return;
+    if (measurement.status === "rejected") { setRecord(measurement); setStepIndex(FIELD_STEPS.length - 1); return; }
+    if (decision === "pending") return;
     try {
-      let review = liveReview;
-      if (review?.status === "completed") {
-        for (const item of review.items.filter((entry) => entry.human_status === "pending")) {
-          const itemDecision = item.type === "none" ? "rejected" : decision === "rejected" ? "rejected" : "accepted";
-          review = await decideAIReviewItem(liveMeasurement.id, item.id, itemDecision);
+      let latestReview = review;
+      if (latestReview?.status === "completed") {
+        for (const item of latestReview.items.filter((entry) => entry.human_status === "pending")) {
+          const isPositiveFinding = item.type !== "none" && item.state !== "stable" && item.state !== "not_visible";
+          latestReview = await decideAIReviewItem(measurement.id, item.id, decision === "accepted" && isPositiveFinding ? "accepted" : "rejected");
         }
-        setLiveReview(review);
+        setReview(latestReview);
       }
-      const confirmed = await confirmMeasurement(liveMeasurement.id, "展示模式监测员", "V0.5 Showcase 实时模式人工确认");
-      setRecordId(confirmed.id);
-      setDecision(decision === "pending" ? "accepted" : decision);
-      setStepIndex(SHOWCASE_STEPS.length - 1);
-    } catch (error) {
-      setLiveMessage(error instanceof Error ? error.message : "确认记录失败。");
-      setLiveState("failed");
-    }
+      const confirmed = await confirmMeasurement(measurement.id, observerName.trim(), remark.trim(), decision === "accepted" ? "现场已核对并确认所选可见变化。" : "现场核对后未采纳 AI 可见变化提示。");
+      setRecord(confirmed); setStepIndex(FIELD_STEPS.length - 1); setPlaying(false);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "人工确认保存失败。"); }
   }
 
-  function handlePhonePrimary() {
-    if (step.id === "confirm") {
-      void finishConfirmation();
-      return;
-    }
-    if (step.id === "record") {
-      if (mode === "live" && recordId && liveMeasurement?.status !== "rejected") navigate(`/record/${recordId}`);
-      else resetRun();
-      return;
-    }
-    advance();
-  }
+  function handlePrimary() { if (step.id === "human_confirm") void finishConfirmation(); else if (step.id === "record") record && navigate(`/record/${record.id}`); else advance(); }
+  function startAutoplay() { if (step.id === "record") resetRun(); setPlaying(true); }
 
-  function startAutoplay() {
-    if (step.id === "record") resetRun();
-    setPlaying(true);
-  }
-
-  const completedPercent = Math.round((stepIndex / (SHOWCASE_STEPS.length - 1)) * 100);
-  const liveReady = aiStatus ? aiStatus.enabled && aiStatus.configured : false;
+  if (error && !activeCase) return <section className="page"><div className="notice error">{error}</div></section>;
+  if (!activeCase) return <section className="page"><div className="empty">正在载入 Field Inspector Simulator…</div></section>;
 
   return (
-    <section className="showcase-page" data-testid="showcase-page">
-      <header className="showcase-hero">
-        <div><p>GeoReCheck V0.5 · 比赛展示模式</p><h1>巡查员到现场后，先看房，再量缝，最后留记录。</h1><span>左边看现场，中间看手机怎么用，右边看每一步为什么做。</span></div>
-        <div className="showcase-mode-switch" aria-label="展示与实时模式切换">
-          <button data-testid="showcase-mode" className={mode === "showcase" ? "active" : ""} onClick={() => setMode("showcase")}><strong>展示模式</strong><small>本地样例 · 稳定无网络</small></button>
-          <button data-testid="live-mode" className={mode === "live" ? "active" : ""} onClick={() => setMode("live")}><strong>实时模式</strong><small>后端 + StepFun {liveReady ? "· 已就绪" : "· 请检查配置"}</small></button>
-        </div>
-      </header>
-
-      <div className="showcase-casebar">
-        <div><span>选择故事</span>{SHOWCASE_CASES.map((item) => <button data-testid={`case-${item.id}`} className={item.id === activeCaseId ? "active" : ""} key={item.id} onClick={() => setActiveCaseId(item.id)}><strong>{item.shortLabel}</strong><small>{item.id}</small></button>)}</div>
-        <div className="showcase-playback">
-          <button onClick={() => setStepIndex((value) => Math.max(0, value - 1))} disabled={stepIndex === 0}>上一步</button>
-          <button data-testid="showcase-autoplay" className="play" onClick={() => playing ? setPlaying(false) : startAutoplay()}>{playing ? "暂停" : "自动演示"}</button>
-          <button data-testid="showcase-next" onClick={advance} disabled={!canAdvance || stepIndex === SHOWCASE_STEPS.length - 1}>下一步</button>
-          <button onClick={() => resetRun()}>重新开始</button>
-        </div>
-      </div>
-
-      <div className="showcase-progress"><span style={{ width: `${completedPercent}%` }} /><small>{step.number} · {step.label}</small><b>{completedPercent}%</b></div>
-
-      {mode === "showcase" ? <div className="mode-disclosure"><strong>演示模式</strong> 当前读取仓库内置、已通过几何验证的样例结果；不会伪装成实时 StepFun 调用。</div> : <div className="mode-disclosure live"><strong>实时模式</strong> 当前会真实调用本机 FastAPI；StepFun 是否运行取决于本地配置和网络，失败时仍保留几何结果。</div>}
-
+    <section className="showcase-page v06" data-testid="showcase-page">
+      <header className="showcase-hero"><div><p>GeoReCheck</p><h1>基层地灾巡查辅助工具</h1><span>人走到现场拍照，几何量毫米，AI 补人眼，人来做确认。</span></div><b className="demo-badge">DEMO</b></header>
+      <div className="showcase-casebar"><div><span>巡查案例</span>{cases.map((item) => <button data-testid={`case-${item.case_id}`} className={item.case_id === activeCaseId ? "active" : ""} key={item.case_id} onClick={() => setActiveCaseId(item.case_id)}><strong>{item.title.replace("墙体裂缝复测 + ", "")}</strong><small>{item.case_id}</small></button>)}</div><div className="showcase-playback"><button onClick={() => { setPlaying(false); setStepIndex((value) => Math.max(0, value - 1)); }} disabled={stepIndex === 0}>上一步</button><button data-testid="showcase-autoplay" className="play" onClick={() => playing ? setPlaying(false) : startAutoplay()}>{playing ? "暂停" : "自动巡查"}</button><button data-testid="showcase-next" onClick={advance} disabled={!canAdvance}>下一步</button><button onClick={resetRun}>重新开始</button></div></div>
+      <div className="showcase-progress public-progress">{PUBLIC_PHASES.map((phase, index) => <div key={phase.id} className={index === publicPhaseIndex ? "active" : index < publicPhaseIndex ? "done" : ""}><span>{index < publicPhaseIndex ? "✓" : phase.number}</span><b>{phase.label}</b></div>)}</div>
+      <div className="mode-disclosure"><strong>Hybrid Replay</strong> 几何真实调用本机 FastAPI / OpenCV，记录真实写入 SQLite；AI 内容回放自 2026-08-28 已保存的 StepFun 成功响应。实时 AI 仅在用户主动点击后运行。</div>
+      {error ? <div className="notice error showcase-error">{error}</div> : null}
       <div className="showcase-layout">
-        <ShowcaseScene activeCase={activeCase} stepIndex={stepIndex} step={step} />
-        <PhoneFrame activeCase={activeCase} step={step} mode={mode} liveBusy={liveState === "measuring" || liveState === "reviewing"} liveMessage={liveMessage} liveMeasurement={liveMeasurement} liveReview={liveReview} decision={decision} recordId={recordId} onPrimary={handlePhonePrimary} onDecision={setDecision} onOpenRecord={handlePhonePrimary} />
-        <ShowcaseSidebar stepIndex={stepIndex} step={step} />
+        <ShowcaseScene activeCase={activeCase} step={step} onCapture={handleCapture} />
+        {captureTransfer ? <div key={captureTransfer.token} className={`capture-transfer ${captureTransfer.kind}`}><img src={captureTransfer.url} alt="现场照片正在进入手机" /><span>照片进入手机</span></div> : null}
+        <PhoneFrame activeCase={activeCase} step={step} measurement={measurement} review={review} processMessage={processMessage} processBusy={geometryState === "running" || replayState === "running"} captures={captures} decision={decision} observerName={observerName} remark={remark} record={record} liveAIState={liveAIState} onPrimary={handlePrimary} onDecision={setDecision} onObserverName={setObserverName} onRemark={setRemark} onRunLiveAI={() => void runLiveAI()} onOpenRecord={() => record && navigate(`/record/${record.id}`)} />
+        <ShowcaseSidebar step={step} activeCase={activeCase} isPlaying={playing} />
       </div>
     </section>
   );

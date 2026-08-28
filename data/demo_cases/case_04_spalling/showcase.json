@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "case_id": "case_04_spalling",
+  "title": "小位移 + 局部表面剥落",
+  "location": "贵州仁怀 · MP-03 · WALL-02",
+  "assets": {
+    "context": "/demo-cases/case_04_spalling/context.jpg",
+    "previous_close": "/demo-cases/case_04_spalling/previous_close.jpg",
+    "current_close": "/demo-cases/case_04_spalling/current_close.jpg"
+  },
+  "geometry": {
+    "measured_opening_delta_mm": 1.234,
+    "expected_opening_delta_mm": 1.2,
+    "quality_gate": "accepted",
+    "quality_score": 0.8786969803260504,
+    "quality_reasons": [],
+    "measurement_source": "FastAPI / OpenCV deterministic geometry"
+  },
+  "viewpoint": {
+    "previous": {
+      "yaw": 0.0,
+      "pitch": 0.0
+    },
+    "current": {
+      "yaw": -10.0,
+      "pitch": 0.0
+    },
+    "delta_deg": 10.0,
+    "different": true
+  },
+  "provenance": {
+    "context_source": {
+      "scene_id": "v04_scene_03",
+      "dataset": "Wall Crack Image Dataset for Earthquake and Structural Health Analysis",
+      "source_url": "https://data.mendeley.com/datasets/hxrry6krs7/1",
+      "doi": "10.17632/hxrry6krs7.1",
+      "license": "CC BY 4.0",
+      "source_filename": "RA_CRACK_IMG (131).jpg",
+      "source_file_id": "c64f043c-4cf1-43d3-9dc5-bd14e21dbeba",
+      "source_sha256": "399c938b123cf6ad24b14373389f5be4c9d6893f42d7b3091f417756b58bdc60",
+      "curated_file": "data/curated_scene_library/scene_03.jpg",
+      "transforms": [
+        "resize_cover_1440x960",
+        "jpeg_quality_91"
+      ],
+      "is_real_guizhou_monitoring_data": false
+    },
+    "close_source": {
+      "scene_id": "wall_scene_003",
+      "dataset": "Özgenel Concrete Crack Segmentation Dataset",
+      "source_file": "data/datasets/ozgenel/rgb/417.JPG",
+      "mask_file": "data/datasets/ozgenel/BW/417.jpg",
+      "source_url": "https://data.mendeley.com/datasets/jwsn7tfbrp/1",
+      "doi": "10.17632/jwsn7tfbrp.1",
+      "license": "CC BY 4.0",
+      "usage": "controlled synthetic hackathon demo",
+      "is_real_guizhou_monitoring_data": false,
+      "is_golden_path": false,
+      "selection_score": 5.27666
+    },
+    "synthetic_changes": [
+      "opening_delta_1.2mm",
+      "viewpoint_yaw_-10_pitch_+0_deg",
+      "controlled_spalling"
+    ],
+    "disclosure": "公开墙体图片与明确受控变化构成的现场巡查演示，不是真实事故或贵州现场记录。"
+  },
+  "field_scene": {
+    "house_position": [
+      0.0,
+      1.5,
+      -2.0
+    ],
+    "crack_position": [
+      1.65,
+      1.55,
+      0.04
+    ],
+    "drainage_position": [
+      0.0,
+      0.08,
+      1.8
+    ],
+    "worker_entry": [
+      -5.2,
+      0.0,
+      4.8
+    ],
+    "worker_context_stop": [
+      -1.3,
+      0.0,
+      2.5
+    ],
+    "worker_close_stop": [
+      0.8,
+      0.0,
+      1.25
+    ],
+    "controlled_roi": true
+  },
+  "ai_replay": {
+    "provider": "StepFun",
+    "model": "step-3.7-flash",
+    "original_latency_ms": 38422,
+    "attempts": 1,
+    "validated_date": "2026-08-28",
+    "source_artifact": "artifacts/ai_validation_v04/responses.jsonl",
+    "source_run": 2,
+    "parsed": {
+      "scene_consistency": "same_location",
+      "observations": [
+        {
+          "type": "spalling_or_peeling",
+          "state": "new",
+          "evidence": "图3右侧区域出现图2中未见的浅色不规则斑块，疑似表层剥落或材料缺失",
+          "confidence": "medium",
+          "requires_human_check": true
+        }
+      ],
+      "coverage_complete": true,
+      "missing_views": [],
+      "record_draft": "本次复测与上次相比，裂缝CRACK-W01未见明显延伸或新分支。裂缝右侧区域新增浅色不规则斑块，疑似表面剥落，需人工复核确认。复测标志完好。几何测量显示开口变化1.2mm，由外部算法提供。",
+      "disclaimer": "本复核仅基于图像目视比较，不替代专业地质判断。毫米级位移数据由外部几何算法提供。不构成风险评估或应急建议。"
+    }
+  }
+}

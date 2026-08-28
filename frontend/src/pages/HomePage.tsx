@@ -20,7 +20,7 @@ export default function HomePage() {
           </ul>
           <p className="core-sentence"><b>几何算法负责“量”</b><b>阶跃多模态负责“看”</b><b>监测员负责“确认”</b></p>
           <div className="hero-actions">
-            <Link className="button primary large" to="/showcase">开始 60 秒比赛展示</Link>
+            <Link className="button primary large" to="/showcase">开始 60 秒现场巡查</Link>
             <Link className="text-link" to="/capture?demo=1&case=case_03_seepage">直接进入技术操作页</Link>
           </div>
           <p className="source-caption">工作事实：<a href={PEOPLE_SOURCE} target="_blank" rel="noreferrer">人民网贵州 2026-05-22 公开报道</a></p>

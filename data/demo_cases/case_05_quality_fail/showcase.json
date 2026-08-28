@@ -1,0 +1,175 @@
+{
+  "schema_version": 1,
+  "case_id": "case_05_quality_fail",
+  "title": "照片模糊，无法可靠复核",
+  "location": "贵州仁怀 · MP-03 · WALL-02",
+  "assets": {
+    "context": "/demo-cases/case_05_quality_fail/context.jpg",
+    "previous_close": "/demo-cases/case_05_quality_fail/previous_close.jpg",
+    "current_close": "/demo-cases/case_05_quality_fail/current_close.jpg"
+  },
+  "geometry": {
+    "measured_opening_delta_mm": null,
+    "expected_opening_delta_mm": 4.8,
+    "quality_gate": "rejected",
+    "quality_score": 0.0010127393164588918,
+    "quality_reasons": [
+      "无法可靠测量：左侧标靶识别不足。",
+      "无法可靠测量：右侧标靶识别不足。",
+      "图像清晰度不足，请重新拍摄。",
+      "拍摄距离过远。"
+    ],
+    "measurement_source": "FastAPI / OpenCV deterministic geometry"
+  },
+  "viewpoint": {
+    "previous": {
+      "yaw": 0.0,
+      "pitch": 0.0
+    },
+    "current": {
+      "yaw": 13.0,
+      "pitch": 7.0
+    },
+    "delta_deg": 14.765,
+    "different": true
+  },
+  "provenance": {
+    "context_source": {
+      "scene_id": "v04_scene_11",
+      "dataset": "Wall Crack Image Dataset for Earthquake and Structural Health Analysis",
+      "source_url": "https://data.mendeley.com/datasets/hxrry6krs7/1",
+      "doi": "10.17632/hxrry6krs7.1",
+      "license": "CC BY 4.0",
+      "source_filename": "SA_crack_91.jpg",
+      "source_file_id": "84e9d9cf-cada-4100-861a-713418957661",
+      "source_sha256": "68084ee9265c58f5df56f3556c33b599f9118e38508a3cb5a95fe103b970bfb6",
+      "curated_file": "data/curated_scene_library/scene_11.jpg",
+      "transforms": [
+        "resize_cover_1440x960",
+        "jpeg_quality_91"
+      ],
+      "is_real_guizhou_monitoring_data": false
+    },
+    "close_source": {
+      "scene_id": "wall_scene_002",
+      "dataset": "Özgenel Concrete Crack Segmentation Dataset",
+      "source_file": "data/datasets/ozgenel/rgb/529.JPG",
+      "mask_file": "data/datasets/ozgenel/BW/529.jpg",
+      "source_url": "https://data.mendeley.com/datasets/jwsn7tfbrp/1",
+      "doi": "10.17632/jwsn7tfbrp.1",
+      "license": "CC BY 4.0",
+      "usage": "controlled synthetic hackathon demo",
+      "is_real_guizhou_monitoring_data": false,
+      "is_golden_path": false,
+      "selection_score": 5.33544
+    },
+    "synthetic_changes": [
+      "opening_delta_4.8mm",
+      "viewpoint_yaw_+13_pitch_+7_deg",
+      "controlled_blur_sigma_9"
+    ],
+    "disclosure": "公开墙体图片与明确受控变化构成的现场巡查演示，不是真实事故或贵州现场记录。"
+  },
+  "field_scene": {
+    "house_position": [
+      0.0,
+      1.5,
+      -2.0
+    ],
+    "crack_position": [
+      1.65,
+      1.55,
+      0.04
+    ],
+    "drainage_position": [
+      0.0,
+      0.08,
+      1.8
+    ],
+    "worker_entry": [
+      -5.2,
+      0.0,
+      4.8
+    ],
+    "worker_context_stop": [
+      -1.3,
+      0.0,
+      2.5
+    ],
+    "worker_close_stop": [
+      0.8,
+      0.0,
+      1.25
+    ],
+    "controlled_roi": false
+  },
+  "ai_replay": {
+    "provider": "StepFun",
+    "model": "step-3.7-flash",
+    "original_latency_ms": 28916,
+    "attempts": 1,
+    "validated_date": "2026-08-28",
+    "source_artifact": "artifacts/ai_validation_v04/responses.jsonl",
+    "source_run": 3,
+    "parsed": {
+      "scene_consistency": "likely_same",
+      "observations": [
+        {
+          "type": "coverage_missing",
+          "state": "uncertain",
+          "evidence": "本次裂缝近景（图3）严重模糊，无法辨认裂缝端点位置、宽度变化、复测标志细节及表面状况，无法与图2进行可靠目视比较",
+          "confidence": "high",
+          "requires_human_check": true
+        },
+        {
+          "type": "new_crack",
+          "state": "not_visible",
+          "evidence": "图3图像模糊，无法确认是否有新裂缝出现",
+          "confidence": "high",
+          "requires_human_check": true
+        },
+        {
+          "type": "crack_extension",
+          "state": "not_visible",
+          "evidence": "图3图像模糊，无法确认裂缝端点是否延伸或出现新分支",
+          "confidence": "high",
+          "requires_human_check": true
+        },
+        {
+          "type": "seepage_or_water_stain",
+          "state": "not_visible",
+          "evidence": "图3图像模糊，无法确认是否有新增渗水或水迹",
+          "confidence": "high",
+          "requires_human_check": true
+        },
+        {
+          "type": "spalling_or_peeling",
+          "state": "not_visible",
+          "evidence": "图3图像模糊，无法确认是否有表面剥落或掉块",
+          "confidence": "high",
+          "requires_human_check": true
+        },
+        {
+          "type": "wall_surface_change",
+          "state": "not_visible",
+          "evidence": "图3图像模糊，无法确认墙体表面是否有新增凹凸、错台或隆起",
+          "confidence": "high",
+          "requires_human_check": true
+        },
+        {
+          "type": "marker_damage",
+          "state": "not_visible",
+          "evidence": "图3图像模糊，无法确认复测标志是否破损、遮挡或位移",
+          "confidence": "high",
+          "requires_human_check": true
+        }
+      ],
+      "coverage_complete": false,
+      "missing_views": [
+        "本次裂缝近景（图3）图像严重模糊，无法完成目视复核，需重新拍摄清晰近景照片"
+      ],
+      "record_draft": "本次复测裂缝近景图像（图3）严重模糊，无法辨认裂缝细节及复测标志状态，无法与上次图像（图2）进行可靠比较。建议重新拍摄清晰近景照片后复核。",
+      "disclaimer": "本系统仅进行图像比对辅助，不判断地质灾害风险，不提供预警或应急建议。所有观察结果需经人工复核确认。"
+    }
+  }
+}
