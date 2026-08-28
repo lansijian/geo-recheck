@@ -97,7 +97,12 @@ def run_and_persist_ai_review(
             current_path,
             {
                 "crack_id": inspection.crack_id or "CRACK-W01",
-                "opening_delta_mm": inspection.opening_delta_mm,
+                "opening_delta_mm": (
+                    inspection.opening_delta_mm
+                    if inspection.measurement_status != "rejected"
+                    else None
+                ),
+                "measurement_status": inspection.measurement_status,
             },
         )
     except StepFunReviewError as error:

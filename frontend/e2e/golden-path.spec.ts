@@ -71,7 +71,7 @@ test("StepFun 不可用时几何结果仍可确认并生成记录", async ({ pag
         latency_ms: 1851,
         attempts: 0,
         error_code: "quota",
-        error_message: "StepFun 配额暂不可用。",
+        error_message: "StepFun 当前 API 通道额度不可用，请核对 Step Plan/Open API 端点与对应额度。",
         parsed: null,
         items: [],
       }),
@@ -79,7 +79,7 @@ test("StepFun 不可用时几何结果仍可确认并生成记录", async ({ pag
   });
   await runOneMinuteDemo(page);
   await expect(page.getByText("AI 现场复核暂不可用", { exact: true })).toBeVisible();
-  await expect(page.getByText(/配额暂不可用.*几何测量结果不受影响/)).toBeVisible();
+  await expect(page.getByText(/API 通道额度不可用.*几何测量结果不受影响/)).toBeVisible();
   await expect(page.locator(".opening-number")).toContainText("mm");
   await page.getByRole("button", { name: "确认并生成记录" }).click();
   await expect(page).toHaveURL(/\/record\/[0-9a-f-]+$/);

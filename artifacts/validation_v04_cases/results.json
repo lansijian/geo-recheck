@@ -24,9 +24,9 @@
     "expected_gate": "accepted",
     "actual_gate": "accepted",
     "expected_opening_delta_mm": 4.8,
-    "measured_opening_delta_mm": 4.783,
-    "absolute_error_mm": 0.017,
-    "quality_score": 0.9338680327630833,
+    "measured_opening_delta_mm": 4.786,
+    "absolute_error_mm": 0.014,
+    "quality_score": 0.9315483592067917,
     "quality_reasons": []
   },
   {

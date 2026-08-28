@@ -70,13 +70,13 @@ notepad .env.local
 
 ```dotenv
 STEPFUN_API_KEY=
-STEPFUN_BASE_URL=https://api.stepfun.com/v1
+STEPFUN_BASE_URL=https://api.stepfun.com/step_plan/v1
 STEPFUN_MODEL=step-3.7-flash
-STEPFUN_TIMEOUT_SECONDS=45
+STEPFUN_TIMEOUT_SECONDS=180
 STEPFUN_AI_REVIEW_ENABLED=false
 ```
 
-密钥不会通过 `/api/ai/status`、SQLite 或日志返回。没有密钥时几何主链路仍完整可用。
+Step Plan 密钥必须使用上面的 `/step_plan/v1` 地址；普通 Open API 密钥则使用 `https://api.stepfun.com/v1`。两者的额度通道相互独立，不能用普通 Open API 的账户余额判断 Step Plan 剩余额度。密钥不会通过 `/api/ai/status`、SQLite 或日志返回。没有密钥时几何主链路仍完整可用。
 
 ## 验证
 
@@ -92,9 +92,11 @@ npm run e2e --prefix frontend
 
 ```bat
 %GEORECHECK_PYTHON% scripts\test_stepfun_vision.py
+set RUN_STEPFUN_LIVE_TEST=1
+%GEORECHECK_PYTHON% scripts\run_ai_validation_v04.py
 ```
 
-脚本会把可审计结果写入 `artifacts/stepfun_v04/live_smoke.json`。配额、网络或模型失败会明确标记为失败，不会用 fixture 冒充真实成功。离线 pytest 使用 `backend/tests/fixtures/stepfun_response.json` 验证解析、Pydantic、人工处置和记录生成。
+脚本会把可审计结果写入 `artifacts/stepfun_v04/live_smoke.json` 和 `artifacts/ai_validation_v04/`。2026-08-28 的 `step-3.7-flash` Step Plan 实测为：15/15 调用及 JSON 解析成功、预期现象命中 13/15、含额外正向条目的运行 1/15、中位延迟 42.7 秒。它们只是 5 个受控 Demo Cases 的结果，不是通用准确率。配额、网络或模型失败会明确标记为失败，不会用 fixture 冒充真实成功。离线 pytest 使用 `backend/tests/fixtures/stepfun_response.json` 验证解析、Pydantic、人工处置和记录生成。
 
 V0.3 的受控几何验证结果仍保留在 `artifacts/validation_v03/`；这些数值只代表合成实验，不代表野外精度。
 
@@ -113,7 +115,6 @@ V0.4 的逐项验收状态与 live/offline 证据边界见 [`docs/V0_4_COMPLETIO
 
 ## 当前未完成的真实世界验证
 
-- StepFun 账号需要可用配额才能取得 live PASS；
 - 实体复测贴尺寸与贴装验证；
 - 真实相机标定后的 0/2/5/10 mm 物理位移实验；
 - 室外光照、距离、角度与长期贴装测试；

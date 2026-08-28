@@ -4,6 +4,7 @@ import json
 import uuid
 from pathlib import Path
 
+import httpx
 import pytest
 from pydantic import ValidationError
 from sqlalchemy import delete
@@ -16,7 +17,13 @@ from app.services.ai_review import (
     decide_ai_review_item,
     run_and_persist_ai_review,
 )
-from app.services.stepfun_observer import StepFunReviewError, ai_status, parse_review_response
+from app.services.stepfun_observer import (
+    StepFunReviewError,
+    _error_from_response,
+    ai_status,
+    build_messages,
+    parse_review_response,
+)
 
 
 FIXTURE = Path(__file__).parent / "fixtures" / "stepfun_response.json"
@@ -46,6 +53,37 @@ def test_ai_status_never_returns_key() -> None:
     status = ai_status()
     assert set(status) == {"enabled", "provider", "model", "configured"}
     assert "key" not in json.dumps(status).lower()
+
+
+def test_stepfun_http_errors_distinguish_quota_and_rate_limit() -> None:
+    quota_error = _error_from_response(httpx.Response(402))
+    rate_limit_error = _error_from_response(httpx.Response(429))
+
+    assert quota_error.code == "quota"
+    assert "API 通道额度" in str(quota_error)
+    assert rate_limit_error.code == "rate_limit"
+    assert "速率限制" in str(rate_limit_error)
+
+
+def test_stepfun_messages_include_three_images_and_rejected_geometry_status(
+    tmp_path: Path,
+) -> None:
+    image = tmp_path / "sample.jpg"
+    image.write_bytes(b"fixture")
+
+    messages = build_messages(
+        image,
+        image,
+        image,
+        {"opening_delta_mm": None, "measurement_status": "rejected"},
+    )
+    content = messages[1]["content"]
+    image_parts = [part for part in content if part["type"] == "image_url"]
+    instruction = str(content[-1]["text"])
+
+    assert len(image_parts) == 3
+    assert '"measurement_status": "rejected"' in instruction
+    assert '"opening_delta_mm": null' in instruction
 
 
 def test_human_decisions_control_final_record() -> None:
@@ -120,8 +158,14 @@ def test_provider_failure_is_persisted_without_changing_geometry(
     Base.metadata.create_all(bind=engine)
     inspection_id = str(uuid.uuid4())
 
-    def fail_review(*_args, **_kwargs):  # type: ignore[no-untyped-def]
-        raise StepFunReviewError("quota", "StepFun 配额暂不可用。")
+    def fail_review(*args, **_kwargs):  # type: ignore[no-untyped-def]
+        measurement = args[3]
+        assert measurement["opening_delta_mm"] == 4.8
+        assert measurement["measurement_status"] == "pending"
+        raise StepFunReviewError(
+            "quota",
+            "StepFun 当前 API 通道额度不可用，请核对 Step Plan/Open API 端点与对应额度。",
+        )
 
     monkeypatch.setattr("app.services.ai_review.run_field_review", fail_review)
 

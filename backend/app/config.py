@@ -29,8 +29,10 @@ CAMERA_PROFILE_PATH = DATA_ROOT / "camera_profiles" / "default_camera.json"
 DEMO_LOCATION_MODE = os.getenv("DEMO_LOCATION_MODE", "true").lower() == "true"
 DEMO_CASES_ROOT = DATA_ROOT / "demo_cases"
 STEPFUN_API_KEY = os.getenv("STEPFUN_API_KEY", "").strip()
-STEPFUN_BASE_URL = os.getenv("STEPFUN_BASE_URL", "https://api.stepfun.com/v1").rstrip("/")
+STEPFUN_BASE_URL = os.getenv(
+    "STEPFUN_BASE_URL", "https://api.stepfun.com/step_plan/v1"
+).rstrip("/")
 STEPFUN_MODEL = os.getenv("STEPFUN_MODEL", "step-3.7-flash").strip()
-STEPFUN_TIMEOUT_SECONDS = float(os.getenv("STEPFUN_TIMEOUT_SECONDS", "45"))
+STEPFUN_TIMEOUT_SECONDS = float(os.getenv("STEPFUN_TIMEOUT_SECONDS", "180"))
 STEPFUN_AI_REVIEW_ENABLED = os.getenv("STEPFUN_AI_REVIEW_ENABLED", "false").lower() == "true"
 STEPFUN_RESOLVE_IP = os.getenv("STEPFUN_RESOLVE_IP", "").strip() or None

@@ -2,13 +2,12 @@
   "cases": 5,
   "runs_per_case": 3,
   "total_runs": 15,
-  "completed_runs": 0,
-  "json_parse_success_rate": 0.0,
-  "expected_finding_hit_rate": null,
-  "unsupported_finding_rate": null,
-  "median_latency_ms": 1755,
-  "failure_codes": {
-    "quota": 15
-  },
+  "completed_runs": 15,
+  "json_parse_success_rate": 1.0,
+  "expected_finding_hit_rate": 0.8666666666666667,
+  "unsupported_finding_rate": 0.06666666666666667,
+  "unsupported_finding_count": 1,
+  "median_latency_ms": 42728,
+  "failure_codes": {},
   "note": "Live results only. Failed calls are not replaced with fixtures."
 }

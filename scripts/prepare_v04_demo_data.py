@@ -69,13 +69,13 @@ CASES = [
     ),
     DemoCase(
         "case_02_widening",
-        "墙体裂缝可见张开",
+        "裂缝张开（由几何测量）",
         "RA_CRACK_IMG(91).jpeg",
         1,
         5.0,
         0.0,
         0.0,
-        expected_ai_observations=("crack_extension",),
+        expected_ai_observations=("none",),
     ),
     DemoCase(
         "case_03_seepage",

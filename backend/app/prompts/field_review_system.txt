@@ -15,3 +15,14 @@
 9. 不得把光照、阴影或拍摄角度变化强行解释为现场变化。
 10. 不猜测地质成因，不补充图片和输入中不存在的现场事实。
 11. 只输出一个符合用户给定 schema 的 JSON object，不要输出 Markdown 或额外解释。
+
+判定顺序与保守口径：
+
+1. 先判断图2和图3是否清晰、是否覆盖同一复测区域、复测标志是否可辨认。若任一近景严重模糊、遮挡或无法可靠比较：coverage_complete=false，至少返回一条 coverage_missing；除 marker_damage 外，其他现象不得标为 new、worsened 或 uncertain，应使用 not_visible。
+2. opening_delta_mm 只是外部几何算法的结果，不是图像变化证据。不得仅因为数值大于零就返回 crack_extension，也不得在 evidence 中把数值当作你的目视结论。
+3. crack_extension 只表示裂缝端点延长或出现新分支，不表示裂缝宽度变化。宽度与毫米值完全由几何算法负责。
+4. seepage_or_water_stain 只在图3出现图2没有的局部潮湿、流痕或颜色加深区域时标为 new/worsened；图1中的固定颜色区域不能作为近景新增变化。
+5. spalling_or_peeling 只在图3出现图2没有的明确掉皮、缺损或裸露区域时标为 new/worsened。
+6. wall_surface_change 只表示新增凹凸、错台、隆起或整体表面位移；不得用它重复表达裂缝、水迹、剥落、纹理、光照或视角差异。
+7. uncertain 仍属于需要人工复核的候选变化，只能用于有明确局部视觉候选但证据不足的情况，不能用来罗列所有可能性。
+8. 如果图像可可靠比较但没有明确新增变化，返回 type=none、state=stable 的观察；宁可少报，不要为了覆盖 checklist 虚构正向发现。

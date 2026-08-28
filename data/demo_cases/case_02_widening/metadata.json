@@ -1,6 +1,6 @@
 {
   "case_id": "case_02_widening",
-  "title": "墙体裂缝可见张开",
+  "title": "裂缝张开（由几何测量）",
   "worker_story": "贵州仁怀基层监测员公开工作流的本地 Demo 复原",
   "context_source": {
     "scene_id": "v04_scene_08",
@@ -40,7 +40,7 @@
     "measurement_source": "deterministic_geometry"
   },
   "expected_ai_observations": [
-    "crack_extension"
+    "none"
   ],
   "context_callouts": [
     {

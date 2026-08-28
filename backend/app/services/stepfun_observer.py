@@ -93,6 +93,7 @@ def build_messages(
         "measurement": {
             "opening_delta_mm": measurement.get("opening_delta_mm"),
             "measurement_source": "deterministic_geometry",
+            "measurement_status": measurement.get("measurement_status", "accepted"),
         },
         "checklist": checklist or DEFAULT_CHECKLIST,
     }
@@ -129,8 +130,16 @@ def _temporary_dns_override(hostname: str, address: str | None) -> Iterator[None
 
 
 def _error_from_response(response: httpx.Response) -> StepFunReviewError:
-    if response.status_code in {402, 429}:
-        return StepFunReviewError("quota", "StepFun 配额暂不可用。")
+    if response.status_code == 402:
+        return StepFunReviewError(
+            "quota",
+            "StepFun 当前 API 通道额度不可用，请核对 Step Plan/Open API 端点与对应额度。",
+        )
+    if response.status_code == 429:
+        return StepFunReviewError(
+            "rate_limit",
+            "StepFun 请求达到速率限制，请稍后重试。",
+        )
     if response.status_code == 404:
         return StepFunReviewError("model_unavailable", "StepFun 模型暂不可用。")
     return StepFunReviewError("provider_error", f"StepFun 请求失败（HTTP {response.status_code}）。")
@@ -155,6 +164,7 @@ def run_field_review(
     for attempt in range(1, 3):
         payload = {
             "model": config.STEPFUN_MODEL,
+            "temperature": 0,
             "messages": build_messages(
                 context_path,
                 previous_path,

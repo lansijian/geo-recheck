@@ -206,16 +206,34 @@ def _apply_surface_change(image: np.ndarray, change: str, seed: int) -> None:
     mask = np.zeros((height, width), np.uint8)
     center = (int(width * 0.66), int(height * 0.72))
     if change == "controlled_water_stain":
-        for _ in range(13):
-            offset = rng.normal(0, (width * 0.055, height * 0.07), 2).astype(int)
-            axes = (
-                int(rng.uniform(width * 0.025, width * 0.075)),
-                int(rng.uniform(height * 0.035, height * 0.11)),
+        # A narrow source and downward bloom reads as a moisture trace instead
+        # of a generic low-contrast wall discoloration.
+        for step in range(9):
+            progress = step / 8
+            local_center = (
+                int(width * (0.655 + 0.018 * np.sin(step * 0.9))),
+                int(height * (0.53 + 0.035 * step)),
             )
-            cv2.ellipse(mask, (center[0] + offset[0], center[1] + offset[1]), axes, 0, 0, 360, 255, -1)
-        mask = cv2.GaussianBlur(mask, (0, 0), 24)
-        alpha = (mask.astype(np.float32) / 255.0 * 0.46)[..., None]
-        stain = np.full_like(image, (55, 68, 52))
+            axes = (
+                int(width * (0.018 + 0.035 * progress)),
+                int(height * (0.045 + 0.028 * progress)),
+            )
+            cv2.ellipse(mask, local_center, axes, 0, 0, 360, 255, -1)
+        for _ in range(7):
+            offset = rng.normal(0, (width * 0.035, height * 0.025), 2).astype(int)
+            cv2.ellipse(
+                mask,
+                (center[0] + offset[0], center[1] + offset[1]),
+                (int(width * 0.04), int(height * 0.055)),
+                0,
+                0,
+                360,
+                255,
+                -1,
+            )
+        mask = cv2.GaussianBlur(mask, (0, 0), 18)
+        alpha = (mask.astype(np.float32) / 255.0 * 0.58)[..., None]
+        stain = np.full_like(image, (43, 61, 45))
         image[:] = np.clip(image * (1.0 - alpha) + stain * alpha, 0, 255).astype(np.uint8)
         return
     if change == "controlled_spalling":
@@ -236,21 +254,27 @@ def _apply_surface_change(image: np.ndarray, change: str, seed: int) -> None:
                 -1,
             )
         texture_noise = rng.normal(0, 1, image.shape[:2]).astype(np.float32)
-        texture_noise = cv2.GaussianBlur(texture_noise, (0, 0), 4)
-        mask[(texture_noise > 0.32) & (mask > 0)] = 0
+        texture_noise = cv2.GaussianBlur(texture_noise, (0, 0), 3)
+        mask[(texture_noise > 0.36) & (mask > 0)] = 0
         mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((7, 7), np.uint8))
-        edge = cv2.dilate(mask, np.ones((5, 5), np.uint8)) - mask
-        texture = cv2.GaussianBlur(image, (0, 0), 2).astype(np.float32) * 0.72 + np.asarray(
-            (52, 51, 47), dtype=np.float32
+        edge = cv2.dilate(mask, np.ones((9, 9), np.uint8)) - mask
+        inner_rim = mask - cv2.erode(mask, np.ones((9, 9), np.uint8))
+        texture = image.astype(np.float32) * 0.28 + np.asarray(
+            (112, 133, 151), dtype=np.float32
         )
-        texture_noise = rng.normal(0, 21, image.shape[:2]).astype(np.int16)
+        texture_noise = rng.normal(0, 34, image.shape[:2]).astype(np.int16)
         for channel in range(3):
             texture[:, :, channel] = np.clip(texture[:, :, channel] + texture_noise, 0, 255)
         texture = texture.astype(np.uint8)
         image[mask > 0] = texture[mask > 0]
-        chips = (rng.random(image.shape[:2]) > 0.985) & (mask > 0)
-        image[chips] = (94, 98, 91)
-        image[edge > 0] = np.clip(image[edge > 0].astype(np.float32) * 0.72, 0, 255).astype(np.uint8)
+        chips = (rng.random(image.shape[:2]) > 0.975) & (mask > 0)
+        image[chips] = (64, 69, 68)
+        image[inner_rim > 0] = np.clip(
+            image[inner_rim > 0].astype(np.float32) * 1.12, 0, 255
+        ).astype(np.uint8)
+        image[edge > 0] = np.clip(
+            image[edge > 0].astype(np.float32) * 0.5, 0, 255
+        ).astype(np.uint8)
         return
     raise ValueError(f"未知受控表面变化：{change}")
 

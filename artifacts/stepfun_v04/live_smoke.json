@@ -1,10 +1,53 @@
 {
-  "status": "failed",
-  "checked_at": "2026-08-28T06:14:53.337432+00:00",
+  "status": "passed",
+  "checked_at": "2026-08-28T06:29:34.281389+00:00",
   "provider": "stepfun",
   "model": "step-3.7-flash",
   "image_count": 3,
-  "latency_ms": 2877,
-  "error_code": "quota",
-  "message": "StepFun 配额暂不可用。 未使用模拟结果代替。"
+  "latency_ms": 52891,
+  "attempts": 1,
+  "parsed_json": {
+    "scene_consistency": "same_location",
+    "observations": [
+      {
+        "type": "crack_extension",
+        "state": "worsened",
+        "evidence": "外部几何算法测量裂缝CRACK-W01张开增量4.8mm；对比上次（图2）与本次（图3）近景，裂缝形态连续，中部可见缝宽变化趋势，但受光线影响视觉判断需复核。",
+        "confidence": "medium",
+        "requires_human_check": true
+      },
+      {
+        "type": "seepage_or_water_stain",
+        "state": "uncertain",
+        "evidence": "图1（全景）中墙下缘可见绿色区域，疑似水迹或涂层，但图2、图3裂缝周边未见明显潮湿、渗水或流泥痕迹。",
+        "confidence": "medium",
+        "requires_human_check": true
+      },
+      {
+        "type": "spalling_or_peeling",
+        "state": "not_visible",
+        "evidence": "图2、图3裂缝近景区域未见明显新增表面剥落、掉块或风化加剧现象。",
+        "confidence": "high",
+        "requires_human_check": true
+      },
+      {
+        "type": "marker_damage",
+        "state": "not_visible",
+        "evidence": "本次近景（图3）中CRACK-W01复测标志（LEFT、RIGHT）完整清晰，无破损、污渍遮挡或位移。",
+        "confidence": "high",
+        "requires_human_check": true
+      },
+      {
+        "type": "wall_surface_change",
+        "state": "stable",
+        "evidence": "裂缝两侧墙面未见明显新增凹凸、错台或隆起变化。",
+        "confidence": "high",
+        "requires_human_check": true
+      }
+    ],
+    "coverage_complete": true,
+    "missing_views": [],
+    "record_draft": "CRACK-W01裂缝复测：本次现场全景（图1）显示裂缝位于混凝土墙体中上部，左侧有排水管，下缘有绿色区域（待确认水迹）。对比上次近景（图2）与本次近景（图3），裂缝形态连续，复测标志完好。外部几何算法显示裂缝张开增量4.8mm。目视未见明显新裂缝延伸、渗水、剥落或错落变化。建议人工重点复核裂缝宽度变化及墙下缘绿色区域性质。",
+    "disclaimer": "本复核仅基于图像可见变化描述，不构成地质灾害风险判断或预警建议。毫米级位移数据（4.8mm）由外部几何算法提供，非图像目视估算。现场安全状况需由专业人员结合地质环境综合评估。"
+  }
 }
