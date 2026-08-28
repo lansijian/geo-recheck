@@ -22,7 +22,7 @@ def main() -> None:
         png_path.write_bytes(board_png_bytes(board))
         print(f"generated {png_path}")
     pdf_path = args.output / "CRACK-W01_RECHECK_STICKER_V2.pdf"
-    pdf_path.write_bytes(build_sticker_pdf("MP-03", "CRACK-W01", DEMO_LEFT, DEMO_RIGHT))
+    pdf_path.write_bytes(build_sticker_pdf("MP-03", DEMO_LEFT, DEMO_RIGHT))
     print(f"generated {pdf_path}")
 
 

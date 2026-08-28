@@ -118,6 +118,9 @@ export default function PointDetailPage() {
                   <span>{new Date(item.capture_time).toLocaleString("zh-CN", { hour12: false })}</span>
                   <span>较基线累计 {formatMm(item.opening_since_baseline_mm)}</span>
                   <span>较上次 {formatMm(item.opening_delta_mm)}</span>
+                  {item.camera_profile_is_demo ? (
+                    <span className="notice error compact" role="alert">未标定相机，毫米值仅供参考。</span>
+                  ) : null}
                 </li>
               ))}
             </ul>

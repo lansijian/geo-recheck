@@ -193,7 +193,9 @@ def decide_ai_review_item(
 
 
 def build_confirmed_record_text(session: Session, inspection: Inspection) -> str:
-    if inspection.opening_delta_mm is None:
+    if inspection.capture_mode == "baseline":
+        parts = ["本条记录用于建立该监测点的复测基线，不代表一次测得的变化。"]
+    elif inspection.opening_delta_mm is None:
         parts = ["本次几何测量未通过质量门控，未形成毫米结果。"]
     else:
         parts = [f"本次裂缝较上期张开 {inspection.opening_delta_mm:.1f} mm"]

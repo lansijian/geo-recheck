@@ -110,6 +110,11 @@ export default function ResultPage() {
   const canRunAIReview = Boolean(result.demo_case_id) || result.capture_mode === "recheck";
   const contextEvidenceSrc = caseBase ? `${caseBase}/context.jpg` : result.context_photo_path;
   const pendingCount = aiReview?.items.filter((item) => item.human_status === "pending").length ?? 0;
+  // A real point's rejected recheck must return to that point's own capture route, never
+  // fall through to the demo flow — otherwise the retry gets filed against the demo point.
+  const retakeRoute = result.demo_case_id
+    ? "/capture?demo=1&case=case_05_quality_fail"
+    : `/capture?point=${result.monitor_point_id}&mode=${result.capture_mode}`;
 
   return (
     <section className="page result-page human-result">
@@ -181,7 +186,7 @@ export default function ResultPage() {
         <div><dt>Marker IDs</dt><dd>{(metrics.marker_ids ?? result.marker_ids ?? []).join(", ")}</dd></div><div><dt>测量模式</dt><dd>{result.measurement_mode}</dd></div><div><dt>检测器</dt><dd>{result.detector_type}</dd></div><div><dt>Homography RMSE</dt><dd>{metrics.homography_rmse_mm == null ? "—" : `${metrics.homography_rmse_mm.toFixed(3)} mm`}</dd></div><div><dt>质量分</dt><dd>{Math.round(result.quality_score * 100)} / 100</dd></div><div><dt>处理时间</dt><dd>{metrics.processing_ms == null ? "—" : `${metrics.processing_ms.toFixed(0)} ms`}</dd></div>
       </dl><div className="technical-images"><LoadedEvidence src={result.evidence.overlay} alt="视觉标志检测叠加图" label="检测叠加" onOpen={setPreviewImage} /><LoadedEvidence src={result.evidence.rectified} alt="墙面正视校正图" label="正视校正" onOpen={setPreviewImage} /></div></div>{result.quality_reasons.map((reason) => <p className="warning-line" key={reason}>! {reason}</p>)}</details>
 
-      {accepted ? <div className="confirm-strip"><label>记录人<input value={observer} onChange={(event) => setObserver(event.target.value)} /></label><label>备注（可选）<input value={remark} onChange={(event) => setRemark(event.target.value)} /></label><p>{aiBusy ? "AI 复核仍在运行，完成或失败后即可生成记录。" : pendingCount > 0 ? `还有 ${pendingCount} 条 AI 提示未处理；未处理项不会写入记录。` : "正式记录只包含几何结果与人工采纳项。"}</p><button className="button primary large" type="button" disabled={busy || aiBusy || !observer.trim()} onClick={() => void confirm()}>{busy ? "正在生成记录…" : "确认并生成记录"}</button></div> : <button className="button primary large" type="button" onClick={() => navigate("/capture?demo=1&case=case_05_quality_fail")}>重新拍摄</button>}
+      {accepted ? <div className="confirm-strip"><label>记录人<input value={observer} onChange={(event) => setObserver(event.target.value)} /></label><label>备注（可选）<input value={remark} onChange={(event) => setRemark(event.target.value)} /></label><p>{aiBusy ? "AI 复核仍在运行，完成或失败后即可生成记录。" : pendingCount > 0 ? `还有 ${pendingCount} 条 AI 提示未处理；未处理项不会写入记录。` : "正式记录只包含几何结果与人工采纳项。"}</p><button className="button primary large" type="button" disabled={busy || aiBusy || !observer.trim()} onClick={() => void confirm()}>{busy ? "正在生成记录…" : "确认并生成记录"}</button></div> : <button className="button primary large" type="button" onClick={() => navigate(retakeRoute)}>重新拍摄</button>}
       {error ? <div className="notice error" role="alert">{error}</div> : null}
 
       {previewImage ? <div className="image-modal" role="dialog" aria-modal="true" aria-label="影像证据放大查看" onClick={() => setPreviewImage(null)}><button type="button" onClick={() => setPreviewImage(null)}>关闭</button><img src={previewImage.src} alt={previewImage.alt} onClick={(event) => event.stopPropagation()} /></div> : null}

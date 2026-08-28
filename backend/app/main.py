@@ -230,6 +230,9 @@ def list_points(session: Session = Depends(get_db)) -> list[dict]:
                 "last_confirmed_opening_since_baseline_mm": (
                     last.opening_since_baseline_mm if last else None
                 ),
+                "last_confirmed_camera_profile_is_demo": (
+                    last.camera_profile_is_demo if last else False
+                ),
                 "demo_ready": point.monitor_point_id == "MP-03",
             }
         )
@@ -262,7 +265,7 @@ def point_sticker_pdf(monitor_point_id: str, session: Session = Depends(get_db))
         left, right = boards_for_point(point)
     except ValueError as error:
         raise HTTPException(422, str(error)) from error
-    pdf = build_sticker_pdf(point.monitor_point_id, point.structure_name, left, right)
+    pdf = build_sticker_pdf(point.monitor_point_id, left, right)
     return Response(
         content=pdf,
         media_type="application/pdf",

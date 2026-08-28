@@ -24,7 +24,7 @@ def board_png_bytes(board: BoardSpec) -> bytes:
     return buffer.getvalue()
 
 
-def _draw_board_page(canvas: Canvas, point_label: str, crack_label: str, board: BoardSpec) -> None:
+def _draw_board_page(canvas: Canvas, point_label: str, board: BoardSpec) -> None:
     page_w, page_h = A4
     x = (page_w - BOARD_WIDTH_MM * mm) / 2
     y = 92 * mm
@@ -39,23 +39,24 @@ def _draw_board_page(canvas: Canvas, point_label: str, crack_label: str, board: 
     )
     canvas.setFont("Helvetica", 9)
     canvas.drawCentredString(page_w / 2, 78 * mm, "Print at 100% scale. Recheck sticker: 100 mm x 60 mm")
+    # crack_label (point.structure_name) is dropped here: it is Chinese in real use and
+    # Helvetica has no CJK glyphs, so it used to render as black boxes on the printed
+    # sticker. The point id above already identifies the sticker.
     canvas.drawCentredString(
         page_w / 2, 72 * mm,
-        f"{crack_label} {board.side} | Marker IDs: {', '.join(map(str, board.marker_ids))}",
+        f"{board.side} | Marker IDs: {', '.join(map(str, board.marker_ids))}",
     )
     canvas.drawCentredString(page_w / 2, 66 * mm, "Verify the 100 mm edge with a ruler before use.")
     canvas.drawCentredString(page_w / 2, 60 * mm, "Mount on a rigid backing. Both boards must be coplanar.")
     canvas.showPage()
 
 
-def build_sticker_pdf(
-    point_label: str, crack_label: str, left: BoardSpec, right: BoardSpec
-) -> bytes:
+def build_sticker_pdf(point_label: str, left: BoardSpec, right: BoardSpec) -> bytes:
     buffer = io.BytesIO()
     # pageCompression=0 keeps the label text readable in the raw bytes, which is what the
     # endpoint test asserts on. The file is ~1.4 KB either way.
     canvas = Canvas(buffer, pagesize=A4, pageCompression=0)
-    _draw_board_page(canvas, point_label, crack_label, left)
-    _draw_board_page(canvas, point_label, crack_label, right)
+    _draw_board_page(canvas, point_label, left)
+    _draw_board_page(canvas, point_label, right)
     canvas.save()
     return buffer.getvalue()

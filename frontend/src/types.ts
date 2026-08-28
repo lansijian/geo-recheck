@@ -20,6 +20,7 @@ export type Point = {
   context_photo_is_stale: boolean;
   last_confirmed_capture_time?: string | null;
   last_confirmed_opening_since_baseline_mm?: number | null;
+  last_confirmed_camera_profile_is_demo?: boolean;
   demo_ready?: boolean;
 };
 

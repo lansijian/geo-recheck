@@ -53,6 +53,9 @@ export default function PointsPage() {
                       ? `较基线累计 ${point.last_confirmed_opening_since_baseline_mm >= 0 ? "+" : ""}${point.last_confirmed_opening_since_baseline_mm.toFixed(1)} mm`
                       : "尚无已确认记录"}
                   </span>
+                  {point.last_confirmed_opening_since_baseline_mm != null && point.last_confirmed_camera_profile_is_demo ? (
+                    <span className="notice error compact" role="alert">未标定相机，毫米值仅供参考。</span>
+                  ) : null}
                 </div>
               </Link>
             </li>

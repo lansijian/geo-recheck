@@ -119,6 +119,7 @@ h2 { letter-spacing: -.02em; }
 .sticky-submit p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
 .notice { margin: 16px 0; padding: 14px; border: 1px solid var(--line); background: white; }
 .notice.error { color: #812e25; border-color: #dfb9b3; background: #fff4f2; }
+.notice.compact { margin: 4px 0 0; padding: 4px 10px; font-size: 12px; display: inline-block; }
 .status-pill { padding: 9px 12px; border-radius: 999px; font-size: 12px; font-weight: 800; white-space: nowrap; }
 .status-pill.ok { color: #145b43; background: #e2efe8; }
 .status-pill.warning { color: #8a4a22; background: #f7e8d7; }
@@ -357,6 +358,7 @@ figcaption span { color: var(--muted); font-size: 11px; font-weight: 400; }
 .point-history { padding: 24px; border: 1px solid var(--line); background: white; }
 .point-history-list { margin: 14px 0 0; padding: 0; list-style: none; }
 .point-history-list li { padding: 12px 0; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; border-top: 1px solid #edf0ec; font-size: 13px; }
+.point-history-list li .notice.compact { grid-column: 1 / -1; }
 
 @media (max-width: 900px) {
   .field-hero, .field-reality, .result-columns { grid-template-columns: 1fr; }
