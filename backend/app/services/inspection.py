@@ -260,18 +260,8 @@ def create_measurement(
     reasons = list(result.quality.reasons)
     status = "pending" if result.status == "accepted" else "rejected"
     # The 50 mm gate catches an implausible single-period jump. The cumulative value is
-    # deliberately uncapped: a long-tracked crack legitimately exceeds it. On the very
-    # first recheck since baseline, "previous" and "baseline" are the same record, so
-    # opening_delta and opening_since_baseline are numerically identical; gating on it
-    # there would silently cap the cumulative value too, which must never happen.
-    is_first_recheck_since_baseline = (
-        previous is not None and baseline is not None and previous.id == baseline.id
-    )
-    if (
-        not is_first_recheck_since_baseline
-        and opening_delta is not None
-        and abs(opening_delta) > 50.0
-    ):
+    # deliberately uncapped: a long-tracked crack legitimately exceeds it.
+    if opening_delta is not None and abs(opening_delta) > 50.0:
         reasons.append("测量结果与上次差异异常，请重新拍摄或使用卷尺复核。")
         status = "rejected"
         current = None

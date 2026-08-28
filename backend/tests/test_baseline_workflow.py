@@ -91,18 +91,55 @@ def test_cumulative_value_is_not_capped_by_the_single_period_gate(
         files={"image": ("b.png", crack_photo(boards, 0.0), "image/png")},
     ).json()
     confirm_inspection(baseline["id"])
-    # Shift the stored baseline so the cumulative value must exceed the single-period gate
-    # while the period-over-period change stays small.
+
+    # Confirm one recheck so that "previous" is no longer the baseline record.
+    first = client.post(
+        "/api/measure",
+        files={"image": ("c1.png", crack_photo(boards, 2.0), "image/png")},
+        data={"point": "MP-BL06", "capture_mode": "recheck"},
+    ).json()
+    confirm_inspection(first["id"])
+
+    # Shift only the baseline, so the cumulative value must exceed the gate while the
+    # period-over-period change stays small.
     with SessionLocal() as session:
         record = session.get(Inspection, baseline["id"])
         record.planar_x_mm = record.planar_x_mm - 60.0
         session.commit()
+
+    second = client.post(
+        "/api/measure",
+        files={"image": ("c2.png", crack_photo(boards, 5.0), "image/png")},
+        data={"point": "MP-BL06", "capture_mode": "recheck"},
+    )
+    assert second.status_code == 200, second.text
+    body = second.json()
+    assert body["status"] == "pending"
+    assert abs(body["opening_delta_mm"] - 3.0) <= 1.0
+    assert body["opening_since_baseline_mm"] > 50.0
+
+
+def test_single_period_gate_fires_on_the_first_recheck_too(
+    client, make_point, crack_photo, confirm_inspection
+):
+    """The gate is not exempt just because previous and baseline are the same record."""
+    boards = make_point("MP-BL07")
+    baseline = client.post(
+        "/api/points/MP-BL07/baseline",
+        files={"image": ("b.png", crack_photo(boards, 0.0), "image/png")},
+    ).json()
+    confirm_inspection(baseline["id"])
+    with SessionLocal() as session:
+        record = session.get(Inspection, baseline["id"])
+        record.planar_x_mm = record.planar_x_mm - 60.0
+        session.commit()
+
     response = client.post(
         "/api/measure",
         files={"image": ("c.png", crack_photo(boards, 2.0), "image/png")},
-        data={"point": "MP-BL06", "capture_mode": "recheck"},
+        data={"point": "MP-BL07", "capture_mode": "recheck"},
     )
     assert response.status_code == 200, response.text
     body = response.json()
-    assert body["status"] == "pending"
-    assert body["opening_since_baseline_mm"] > 50.0
+    assert body["status"] == "rejected"
+    assert any("异常" in reason for reason in body["quality_reasons"])
