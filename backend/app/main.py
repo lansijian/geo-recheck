@@ -6,8 +6,9 @@ import math
 import statistics
 import uuid
 from contextlib import asynccontextmanager
+from datetime import datetime
 
-from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -33,7 +34,13 @@ from app.services.ai_review import (
     latest_ai_review,
     run_and_persist_ai_review,
 )
-from app.services.registry import point_to_dict, seed_points
+from app.services.registry import (
+    boards_for_point,
+    create_monitor_point,
+    point_to_dict,
+    seed_points,
+)
+from app.services.sticker_pdf import build_sticker_pdf
 from app.services.stepfun_observer import ai_status
 
 
@@ -97,6 +104,19 @@ class ConfirmationPayload(BaseModel):
     observer_name: str = Field(min_length=1, max_length=100)
     remark: str | None = Field(default=None, max_length=1000)
     visible_change_note: str | None = Field(default=None, max_length=1000)
+
+
+class PointCreatePayload(BaseModel):
+    monitor_point_id: str = Field(min_length=1, max_length=64)
+    hazard_id: str = Field(min_length=1, max_length=64)
+    hazard_name: str = Field(min_length=1, max_length=200)
+    monitor_point_name: str = Field(min_length=1, max_length=200)
+    structure_id: str = Field(min_length=1, max_length=64)
+    structure_name: str = Field(min_length=1, max_length=200)
+    location_description: str = Field(min_length=1, max_length=300)
+    latitude: float | None = None
+    longitude: float | None = None
+    elevation: float | None = None
 
 
 class BenchmarkTrialPayload(BaseModel):
@@ -215,6 +235,58 @@ def get_point(monitor_point_id: str, session: Session = Depends(get_db)) -> dict
     point = session.get(MonitorPoint, monitor_point_id)
     if point is None:
         raise HTTPException(404, "监测点不存在。")
+    return point_to_dict(point)
+
+
+@app.post("/api/points")
+def create_point(payload: PointCreatePayload, session: Session = Depends(get_db)) -> dict:
+    try:
+        point = create_monitor_point(session, payload)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+    return point_to_dict(point)
+
+
+@app.get("/api/points/{monitor_point_id}/sticker.pdf")
+def point_sticker_pdf(monitor_point_id: str, session: Session = Depends(get_db)) -> Response:
+    point = session.get(MonitorPoint, monitor_point_id)
+    if point is None:
+        raise HTTPException(404, "监测点不存在。")
+    try:
+        left, right = boards_for_point(point)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+    pdf = build_sticker_pdf(point.monitor_point_id, point.structure_name, left, right)
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{monitor_point_id}_sticker.pdf"'
+        },
+    )
+
+
+@app.put("/api/points/{monitor_point_id}/context-photo")
+async def upload_context_photo(
+    monitor_point_id: str,
+    image: UploadFile = File(...),
+    session: Session = Depends(get_db),
+) -> dict:
+    point = session.get(MonitorPoint, monitor_point_id)
+    if point is None:
+        raise HTTPException(404, "监测点不存在。")
+    if image.content_type and not image.content_type.startswith("image/"):
+        raise HTTPException(415, "仅支持图片文件。")
+    raw = await image.read()
+    if len(raw) > 20 * 1024 * 1024:
+        raise HTTPException(413, "图片不能超过 20 MB。")
+    target_dir = EVIDENCE_ROOT / "points" / monitor_point_id
+    target_dir.mkdir(parents=True, exist_ok=True)
+    target = target_dir / "context.jpg"
+    target.write_bytes(raw)
+    point.context_photo_path = f"/media/points/{monitor_point_id}/context.jpg"
+    point.context_photo_captured_at = datetime.now()
+    session.commit()
     return point_to_dict(point)
 
 

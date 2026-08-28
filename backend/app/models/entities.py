@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, Integer, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
 
@@ -18,13 +18,37 @@ class MonitorPoint(Base):
     structure_id: Mapped[str] = mapped_column(String(64))
     structure_name: Mapped[str] = mapped_column(String(200))
     location_description: Mapped[str] = mapped_column(String(300))
-    latitude: Mapped[float] = mapped_column(Float)
-    longitude: Mapped[float] = mapped_column(Float)
+    latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     elevation: Mapped[float | None] = mapped_column(Float, nullable=True)
-    baseline_mm: Mapped[float] = mapped_column(Float)
-    left_marker_group: Mapped[str] = mapped_column(String(100))
-    right_marker_group: Mapped[str] = mapped_column(String(100))
+    baseline_mm: Mapped[float] = mapped_column(Float)  # legacy: board-centre distance, write-only
+    left_marker_group: Mapped[str] = mapped_column(String(100))   # legacy: derived, never read
+    right_marker_group: Mapped[str] = mapped_column(String(100))  # legacy: derived, never read
     is_demo_location: Mapped[bool] = mapped_column(Boolean, default=True)
+    baseline_inspection_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    context_photo_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    context_photo_captured_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    context_callouts: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    marker_assignments: Mapped[list["MarkerAssignment"]] = relationship(
+        back_populates="point",
+        order_by="MarkerAssignment.slot",
+        lazy="selectin",
+        cascade="all, delete-orphan",
+    )
+
+
+class MarkerAssignment(Base):
+    __tablename__ = "marker_assignments"
+
+    marker_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    monitor_point_id: Mapped[str] = mapped_column(
+        ForeignKey("monitor_points.monitor_point_id"), index=True
+    )
+    side: Mapped[str] = mapped_column(String(8))
+    slot: Mapped[int] = mapped_column(Integer)
+
+    point: Mapped["MonitorPoint"] = relationship(back_populates="marker_assignments")
 
 
 class Inspection(Base):
@@ -61,6 +85,13 @@ class Inspection(Base):
     visible_change_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     remark: Mapped[str | None] = mapped_column(Text, nullable=True)
     demo_case_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    capture_mode: Mapped[str] = mapped_column(String(16), default="recheck")
+    planar_x_mm: Mapped[float | None] = mapped_column(Float, nullable=True)
+    planar_y_mm: Mapped[float | None] = mapped_column(Float, nullable=True)
+    opening_since_baseline_mm: Mapped[float | None] = mapped_column(Float, nullable=True)
+    shear_since_baseline_mm: Mapped[float | None] = mapped_column(Float, nullable=True)
+    camera_profile_is_demo: Mapped[bool] = mapped_column(Boolean, default=False)
+    context_photo_used: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
 
 class AIReview(Base):
