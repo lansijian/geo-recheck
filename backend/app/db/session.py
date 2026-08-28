@@ -78,7 +78,14 @@ def _monitor_points_need_rebuild() -> bool:
 
 
 def _rebuild_monitor_points(connection) -> None:
+    # legacy_alter_table=ON makes RENAME a pure catalog rename: SQLite normally rewrites
+    # any REFERENCES clause that names the old table (e.g. marker_assignments' FK) to
+    # point at the new name, which would leave that FK referencing monitor_points_legacy
+    # after it's dropped below. ON suppresses that rewrite so the FK keeps pointing at
+    # "monitor_points" straight through the rename.
+    connection.execute(text("PRAGMA legacy_alter_table=ON"))
     connection.execute(text("ALTER TABLE monitor_points RENAME TO monitor_points_legacy"))
+    connection.execute(text("PRAGMA legacy_alter_table=OFF"))
     # SQLite does not rename a table's indexes along with the table itself, so the old
     # named index (e.g. ix_monitor_points_hazard_id) stays attached to *_legacy and
     # would collide with the identically-named index the fresh CREATE TABLE defines below.

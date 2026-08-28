@@ -67,8 +67,13 @@ def test_sticker_pdf_contains_the_point_and_its_marker_ids(client, point_payload
     assert response.headers["content-type"] == "application/pdf"
     text = response.content.decode("latin-1")
     assert "MP-T06" in text
-    for marker_id in body["left_marker_group"]:
-        assert str(marker_id) in text
+    # New points get low ids (0, 1, 2, ...), so isolated digits match stray bytes
+    # anywhere in the PDF; assert on the rendered "Marker IDs: ..." label instead, which
+    # only appears if the sticker actually carries this point's own marker block.
+    left_label = f"Marker IDs: {', '.join(map(str, body['left_marker_group']))}"
+    right_label = f"Marker IDs: {', '.join(map(str, body['right_marker_group']))}"
+    assert left_label in text
+    assert right_label in text
 
 
 def test_seeded_demo_point_still_reads_back_its_markers(client):
