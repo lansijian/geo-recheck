@@ -608,6 +608,17 @@ def _monitor_points_need_rebuild() -> bool:
 
 def _rebuild_monitor_points(connection) -> None:
     connection.execute(text("ALTER TABLE monitor_points RENAME TO monitor_points_legacy"))
+    # SQLite does not rename a table's indexes along with the table itself, so the old
+    # named index (e.g. ix_monitor_points_hazard_id) stays attached to *_legacy and
+    # would collide with the identically-named index the fresh CREATE TABLE defines below.
+    stale_indexes = connection.execute(
+        text(
+            "SELECT name FROM sqlite_master WHERE type = 'index' "
+            "AND tbl_name = 'monitor_points_legacy' AND name NOT LIKE 'sqlite_autoindex_%'"
+        )
+    ).scalars().all()
+    for index_name in stale_indexes:
+        connection.execute(text(f"DROP INDEX {index_name}"))
     Base.metadata.tables["monitor_points"].create(bind=connection)
     connection.execute(
         text(
@@ -1035,7 +1046,7 @@ Expected: `points` 不少于 1，`assignments` 为 `points × 8`，MP-03 的 301
 - [ ] **Step 12: 提交**
 
 ```bash
-git add backend/app/models backend/app/db/session.py backend/app/services/registry.py backend/app/services/sticker_pdf.py backend/app/main.py scripts/generate_markers.py backend/tests/test_point_lifecycle.py
+git add backend/app/models backend/app/db/session.py backend/app/services/registry.py backend/app/services/sticker_pdf.py backend/app/main.py scripts/generate_markers.py backend/tests/conftest.py backend/tests/test_point_lifecycle.py
 git commit -m "feat: allocate unique marker blocks per point and emit printable stickers"
 ```
 
