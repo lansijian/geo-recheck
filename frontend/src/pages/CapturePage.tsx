@@ -40,6 +40,8 @@ export default function CapturePage() {
   const [stage, setStage] = useState("选择现场案例");
   const [error, setError] = useState("");
   const [cameraActive, setCameraActive] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const timerRef = useRef<number | null>(null);
@@ -197,13 +199,34 @@ export default function CapturePage() {
 
       <div className="capture-primary-actions" aria-label="照片来源">
         <button className="button" type="button" onClick={startCamera}>使用摄像头</button>
-        <label className="button upload-primary">上传本次近景<input data-testid="photo-input" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" onChange={(event) => { const selected = event.target.files?.[0]; event.currentTarget.value = ""; void handleSelected(selected); }} /></label>
+        <label className="button upload-primary">上传本次近景<input ref={fileInputRef} data-testid="photo-input" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" onChange={(event) => { const selected = event.target.files?.[0]; event.currentTarget.value = ""; void handleSelected(selected); }} /></label>
       </div>
 
       <div className="capture-layout compact-capture">
-        <div className="camera-panel wall-photo-panel">
+        <div
+          className={`camera-panel wall-photo-panel ${dragging ? "dragging" : ""}`}
+          role="button"
+          tabIndex={0}
+          onClick={() => fileInputRef.current?.click()}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              fileInputRef.current?.click();
+            }
+          }}
+          onDragOver={(event) => {
+            event.preventDefault();
+            setDragging(true);
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(event) => {
+            event.preventDefault();
+            setDragging(false);
+            void handleSelected(event.dataTransfer.files?.[0]);
+          }}
+        >
           {preview ? <img data-testid="upload-preview" src={preview} alt="真实建筑墙面裂缝与左右视觉复测贴" /> : <video ref={videoRef} autoPlay playsInline muted aria-label="摄像头实时画面" />}
-          {!preview && !cameraActive ? <div className="camera-empty"><strong>让墙缝和左右复测贴完整入镜</strong><small>JPG、PNG、WebP，最大 20 MB</small></div> : null}
+          {!preview && !cameraActive ? <div className="camera-empty"><strong>让墙缝和左右复测贴完整入镜</strong><small>拖拽或点击上传 JPG、PNG、WebP，最大 20 MB</small></div> : null}
           {preview ? <span className="sticker-visible-badge" data-testid="recheck-sticker-indicator">待算法核验复测贴</span> : null}
           {busy ? <div className="processing-overlay" role="status"><span className="spinner" /><strong>{stage}</strong><small>毫米值来自几何算法，不由大模型估算</small></div> : null}
         </div>
