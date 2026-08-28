@@ -35,10 +35,24 @@ export default function ResultPage() {
   const [remark, setRemark] = useState("");
   const [busy, setBusy] = useState(false);
   const [aiBusy, setAIBusy] = useState(false);
+  const [aiElapsedSeconds, setAIElapsedSeconds] = useState(0);
   const [loading, setLoading] = useState(Boolean(id));
   const [error, setError] = useState("");
   const [previewImage, setPreviewImage] = useState<PreviewImage | null>(null);
   const autoReviewStarted = useRef(false);
+
+  useEffect(() => {
+    if (!aiBusy) {
+      setAIElapsedSeconds(0);
+      return;
+    }
+    const startedAt = Date.now();
+    const timer = window.setInterval(
+      () => setAIElapsedSeconds(Math.floor((Date.now() - startedAt) / 1000)),
+      1000,
+    );
+    return () => window.clearInterval(timer);
+  }, [aiBusy]);
 
   useEffect(() => {
     if (!id) return;
@@ -123,7 +137,7 @@ export default function ResultPage() {
 
         <section className="ai-review-card" aria-live="polite">
           <header><div><p className="eyebrow">AI 现场复核 · 阶跃星辰</p><h2>补充肉眼要看的变化</h2></div>{aiStatus ? <span>{aiStatus.model}</span> : null}</header>
-          {aiBusy ? <div className="ai-loading"><span className="spinner" /><p>正在比较现场全景、上次近景与本次近景…</p></div> : null}
+          {aiBusy ? <div className="ai-loading"><span className="spinner" /><p>正在比较现场全景、上次近景与本次近景…</p><strong>已等待 {aiElapsedSeconds} 秒</strong><small>{aiElapsedSeconds < 90 ? "真实多模态调用通常需要 30–90 秒，请保持页面开启。" : "服务仍在处理；超过 180 秒会返回明确的超时结果，几何测量不受影响。"}</small></div> : null}
           {!aiBusy && (!aiStatus?.enabled || !aiStatus.configured) ? <div className="ai-unavailable"><strong>AI 现场复核未启用</strong><p>几何测量结果不受影响。</p></div> : null}
           {!aiBusy && aiReview?.status === "failed" ? <div className="ai-unavailable"><strong>AI 现场复核暂不可用</strong><p>{aiReview.error_message} 几何测量结果不受影响。</p><button className="button" type="button" onClick={() => void triggerAIReview()}>重新运行 AI 复核</button></div> : null}
           {!aiBusy && aiReview?.status === "completed" ? <div className="finding-list">
@@ -142,8 +156,8 @@ export default function ResultPage() {
 
       <section className="three-image-evidence" aria-label="AI 三图输入与几何证据">
         {caseBase ? <LoadedEvidence src={`${caseBase}/context.jpg`} alt="AI 输入的现场全景" label="图1 · 本次现场全景" onOpen={setPreviewImage} /> : null}
-        <LoadedEvidence src={caseBase ? `${caseBase}/previous_close.jpg` : result.previous_evidence?.original} alt="AI 输入的上次裂缝近景" label="图2 · 上次裂缝近景" onOpen={setPreviewImage} />
-        <LoadedEvidence src={result.evidence.original} alt="AI 输入的本次裂缝近景" label="图3 · 本次裂缝近景" onOpen={setPreviewImage} />
+        <LoadedEvidence src={caseBase ? `${caseBase}/previous_close.jpg` : result.previous_evidence?.original} alt="AI 输入的上次裂缝近景" label="图2 · 上次近景（基线机位）" onOpen={setPreviewImage} />
+        <LoadedEvidence src={result.evidence.original} alt="AI 输入的本次裂缝近景" label="图3 · 本次近景（不同角度）" onOpen={setPreviewImage} />
       </section>
 
       <details className="technical-details"><summary>查看几何技术证据</summary><div className="technical-grid"><dl>

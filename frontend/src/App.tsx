@@ -7,6 +7,7 @@ import HomePage from "./pages/HomePage";
 import RecordPage from "./pages/RecordPage";
 import ResultPage from "./pages/ResultPage";
 import ScenarioPage from "./pages/ScenarioPage";
+import ShowcasePage from "./pages/ShowcasePage";
 import TechnologyPage from "./pages/TechnologyPage";
 
 export default function App() {
@@ -15,6 +16,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/capture" element={<CapturePage />} />
+        <Route path="/showcase" element={<ShowcasePage />} />
         <Route path="/result/:id" element={<ResultPage />} />
         <Route path="/result" element={<ResultPage />} />
         <Route path="/record/:id" element={<RecordPage />} />

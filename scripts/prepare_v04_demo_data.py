@@ -63,7 +63,7 @@ CASES = [
         "RA_CRACK_IMG 32.jpg",
         0,
         0.3,
-        0.0,
+        -18.0,
         0.0,
         expected_ai_observations=("none",),
     ),
@@ -73,8 +73,8 @@ CASES = [
         "RA_CRACK_IMG(91).jpeg",
         1,
         5.0,
-        0.0,
-        0.0,
+        -8.0,
+        8.0,
         expected_ai_observations=("none",),
     ),
     DemoCase(
@@ -83,8 +83,8 @@ CASES = [
         "OH_crack_7.jpg",
         0,
         4.8,
-        0.0,
-        0.0,
+        -12.0,
+        8.0,
         surface_change="controlled_water_stain",
         expected_ai_observations=("seepage_or_water_stain",),
     ),
@@ -94,7 +94,7 @@ CASES = [
         "RA_CRACK_IMG (131).jpg",
         2,
         1.2,
-        0.0,
+        -10.0,
         0.0,
         surface_change="controlled_spalling",
         expected_ai_observations=("spalling_or_peeling",),
@@ -105,8 +105,8 @@ CASES = [
         "SA_crack_91.jpg",
         1,
         4.8,
-        0.0,
-        0.0,
+        13.0,
+        7.0,
         expected_geometry_gate="rejected",
         blur_sigma=9.0,
         expected_ai_observations=("coverage_missing",),
@@ -239,6 +239,9 @@ def prepare_cases(curated: dict[str, dict[str, Any]]) -> None:
 
         close_source = close_manifest[case.scene_index % len(close_manifest)]
         synthetic_changes = [f"opening_delta_{case.opening_delta_mm:g}mm"]
+        synthetic_changes.append(
+            f"viewpoint_yaw_{case.yaw_deg:+g}_pitch_{case.pitch_deg:+g}_deg"
+        )
         if case.surface_change != "none":
             synthetic_changes.append(case.surface_change)
         if case.blur_sigma:
@@ -256,6 +259,11 @@ def prepare_cases(curated: dict[str, dict[str, Any]]) -> None:
                 "measurement_source": "deterministic_geometry",
             },
             "expected_ai_observations": list(case.expected_ai_observations),
+            "capture_viewpoints": {
+                "previous": {"yaw_deg": 0.0, "pitch_deg": 0.0},
+                "current": {"yaw_deg": case.yaw_deg, "pitch_deg": case.pitch_deg},
+                "different_viewpoints_required": True,
+            },
             "context_callouts": [
                 {"id": "01", "label": "裂缝复测点", "x": 0.34, "y": 0.51},
                 {"id": "02", "label": "墙面 / 挡墙观察区域", "x": 0.62, "y": 0.36},

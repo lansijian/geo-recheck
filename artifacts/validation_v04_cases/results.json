@@ -4,40 +4,80 @@
     "expected_gate": "accepted",
     "actual_gate": "accepted",
     "expected_opening_delta_mm": 0.3,
-    "measured_opening_delta_mm": 0.458,
-    "absolute_error_mm": 0.158,
-    "quality_score": 0.9238497939307224,
-    "quality_reasons": []
+    "measured_opening_delta_mm": 0.371,
+    "absolute_error_mm": 0.071,
+    "quality_score": 0.822374142098457,
+    "quality_reasons": [],
+    "previous_viewpoint_deg": {
+      "yaw": 0.0,
+      "pitch": 0.0
+    },
+    "current_viewpoint_deg": {
+      "yaw": -18.0,
+      "pitch": 0.0
+    },
+    "viewpoint_delta_deg": 18.0,
+    "viewpoints_are_different": true
   },
   {
     "case_id": "case_02_widening",
     "expected_gate": "accepted",
     "actual_gate": "accepted",
     "expected_opening_delta_mm": 5.0,
-    "measured_opening_delta_mm": 5.153,
-    "absolute_error_mm": 0.153,
-    "quality_score": 0.9226066861550462,
-    "quality_reasons": []
+    "measured_opening_delta_mm": 5.062,
+    "absolute_error_mm": 0.062,
+    "quality_score": 0.8599314377446972,
+    "quality_reasons": [],
+    "previous_viewpoint_deg": {
+      "yaw": 0.0,
+      "pitch": 0.0
+    },
+    "current_viewpoint_deg": {
+      "yaw": -8.0,
+      "pitch": 8.0
+    },
+    "viewpoint_delta_deg": 11.314,
+    "viewpoints_are_different": true
   },
   {
     "case_id": "case_03_seepage",
     "expected_gate": "accepted",
     "actual_gate": "accepted",
     "expected_opening_delta_mm": 4.8,
-    "measured_opening_delta_mm": 4.786,
-    "absolute_error_mm": 0.014,
-    "quality_score": 0.9315483592067917,
-    "quality_reasons": []
+    "measured_opening_delta_mm": 4.793,
+    "absolute_error_mm": 0.007,
+    "quality_score": 0.843168831365076,
+    "quality_reasons": [],
+    "previous_viewpoint_deg": {
+      "yaw": 0.0,
+      "pitch": 0.0
+    },
+    "current_viewpoint_deg": {
+      "yaw": -12.0,
+      "pitch": 8.0
+    },
+    "viewpoint_delta_deg": 14.422,
+    "viewpoints_are_different": true
   },
   {
     "case_id": "case_04_spalling",
     "expected_gate": "accepted",
     "actual_gate": "accepted",
     "expected_opening_delta_mm": 1.2,
-    "measured_opening_delta_mm": 1.155,
-    "absolute_error_mm": 0.045,
-    "quality_score": 0.9293511028428719,
-    "quality_reasons": []
+    "measured_opening_delta_mm": 1.234,
+    "absolute_error_mm": 0.034,
+    "quality_score": 0.8786969803260504,
+    "quality_reasons": [],
+    "previous_viewpoint_deg": {
+      "yaw": 0.0,
+      "pitch": 0.0
+    },
+    "current_viewpoint_deg": {
+      "yaw": -10.0,
+      "pitch": 0.0
+    },
+    "viewpoint_delta_deg": 10.0,
+    "viewpoints_are_different": true
   },
   {
     "case_id": "case_05_quality_fail",
@@ -46,12 +86,22 @@
     "expected_opening_delta_mm": 4.8,
     "measured_opening_delta_mm": null,
     "absolute_error_mm": null,
-    "quality_score": 0.0010413941936728397,
+    "quality_score": 0.0010127393164588918,
     "quality_reasons": [
       "无法可靠测量：左侧标靶识别不足。",
       "无法可靠测量：右侧标靶识别不足。",
       "图像清晰度不足，请重新拍摄。",
       "拍摄距离过远。"
-    ]
+    ],
+    "previous_viewpoint_deg": {
+      "yaw": 0.0,
+      "pitch": 0.0
+    },
+    "current_viewpoint_deg": {
+      "yaw": 13.0,
+      "pitch": 7.0
+    },
+    "viewpoint_delta_deg": 14.765,
+    "viewpoints_are_different": true
   }
 ]

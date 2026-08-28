@@ -13,7 +13,8 @@ export default function AppShell({ children }: PropsWithChildren) {
           </span>
         </NavLink>
         <nav aria-label="主导航">
-          <NavLink to="/capture?demo=1&case=case_03_seepage">一分钟演示</NavLink>
+          <NavLink to="/showcase">比赛展示</NavLink>
+          <NavLink to="/capture?demo=1&case=case_03_seepage">技术操作</NavLink>
           <NavLink to="/scenario">真实场景</NavLink>
           <NavLink to="/technology">技术依据</NavLink>
           <details className="settings-menu">
@@ -28,7 +29,7 @@ export default function AppShell({ children }: PropsWithChildren) {
       <main>{children}</main>
       <footer>
         <span>本系统辅助重复测量与留痕，不预测滑坡，不替代人工巡查或专业监测设备。</span>
-        <span>V0.4 · 公开场景复原 / 受控仿真</span>
+        <span>V0.5 · 展示编排 / 公开场景复原 / 受控仿真</span>
       </footer>
     </div>
   );

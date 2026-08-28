@@ -26,7 +26,7 @@ async function expectLoadedImage(locator: Locator) {
 
 async function runOneMinuteDemo(page: Page) {
   await page.goto("/");
-  await page.getByRole("link", { name: "开始 60 秒巡查 Demo" }).click();
+  await page.getByRole("link", { name: "直接进入技术操作页" }).click();
   await expect(page.getByRole("heading", { name: "选择一个现场案例" })).toBeVisible();
   await expect(page.getByAltText("本次巡查现场全景")).toBeVisible();
   const responsePromise = page.waitForResponse((response) => response.url().includes("/api/measure") && response.request().method() === "POST");
@@ -44,7 +44,7 @@ test("首页先讲真实监测员与每天巡查至少三次", async ({ page }) 
   await expect(page.getByRole("heading", { name: /每天至少巡查 3 次/ })).toBeVisible();
   await expect(page.getByText("丈量墙缝、比对每日数据、看现场变化，再填写巡查台账", { exact: false })).toBeVisible();
   await expect(page.getByText("几何算法负责“量”", { exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: "开始 60 秒巡查 Demo" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "开始 60 秒比赛展示" })).toBeVisible();
   expect(failures).toEqual([]);
 });
 
@@ -145,6 +145,11 @@ test("一分钟 Demo 输出较上次张开 4–6 mm 与 before/after", async ({ 
   expect(opening).toBeLessThanOrEqual(6);
   await expectLoadedImage(page.getByAltText("AI 输入的上次裂缝近景"));
   await expectLoadedImage(page.getByAltText("AI 输入的本次裂缝近景"));
+  await expect(page.getByText("图2 · 上次近景（基线机位）", { exact: false })).toBeVisible();
+  await expect(page.getByText("图3 · 本次近景（不同角度）", { exact: false })).toBeVisible();
+  const previousSrc = await page.getByAltText("AI 输入的上次裂缝近景").getAttribute("src");
+  const currentSrc = await page.getByAltText("AI 输入的本次裂缝近景").getAttribute("src");
+  expect(previousSrc).not.toBe(currentSrc);
   expect(failures).toEqual([]);
 });
 

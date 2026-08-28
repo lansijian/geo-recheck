@@ -1,6 +1,7 @@
 {
   "case_count": 5,
   "gate_matches": 5,
-  "accepted_case_max_absolute_error_mm": 0.158,
+  "different_viewpoint_cases": 5,
+  "accepted_case_max_absolute_error_mm": 0.071,
   "disclaimer": "Controlled synthetic case validation only; not field accuracy."
 }

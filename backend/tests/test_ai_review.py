@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import httpx
@@ -15,6 +16,7 @@ from app.schemas.ai_review import AIFieldReview
 from app.services.ai_review import (
     build_confirmed_record_text,
     decide_ai_review_item,
+    latest_ai_review,
     run_and_persist_ai_review,
 )
 from app.services.stepfun_observer import (
@@ -193,4 +195,32 @@ def test_provider_failure_is_persisted_without_changing_geometry(
         session.execute(delete(AIReviewItem).where(AIReviewItem.inspection_id == inspection_id))
         session.execute(delete(AIReview).where(AIReview.inspection_id == inspection_id))
         session.delete(inspection)
+        session.commit()
+
+
+def test_stale_running_review_is_recovered_as_interrupted() -> None:
+    Base.metadata.create_all(bind=engine)
+    inspection_id = str(uuid.uuid4())
+    review_id = str(uuid.uuid4())
+    with SessionLocal() as session:
+        session.add(
+            AIReview(
+                id=review_id,
+                inspection_id=inspection_id,
+                provider="stepfun",
+                model="step-3.7-flash",
+                status="running",
+                created_at=datetime.utcnow() - timedelta(minutes=10),
+            )
+        )
+        session.commit()
+
+        review = latest_ai_review(session, inspection_id)
+
+        assert review is not None
+        assert review.status == "failed"
+        assert review.error_code == "interrupted"
+        assert "服务中断后未完成" in (review.error_message or "")
+
+        session.delete(review)
         session.commit()
