@@ -35,7 +35,11 @@ export default function RecordPage() {
       {record.camera_profile_is_demo ? <div className="notice error" role="alert">未标定相机，毫米值仅供参考。</div> : null}
       <article className="paper-record">
         <header><div><p>{record.monitor_point_name} · {record.structure_name} · {record.scene_type}</p><h2>墙体裂缝巡查复测记录</h2></div><span>记录编号：{record.id}</span></header>
-        <section className="record-opening"><span>几何测量 · 较基线累计</span><strong>{cumulativeText}</strong><small>较上次 {perPeriodText} · 确定性视觉几何</small></section>
+        {record.capture_mode === "baseline" ? (
+          <section className="record-opening"><span>几何测量</span><strong>基线已建立</strong><small>本条记录用于建立该监测点的复测基线，不代表一次测得的变化。</small></section>
+        ) : (
+          <section className="record-opening"><span>几何测量 · 较基线累计</span><strong>{cumulativeText}</strong><small>较上次 {perPeriodText} · 确定性视觉几何</small></section>
+        )}
         <section className="record-summary"><h3>自动形成的巡查文字</h3><p>{record.record_text ?? "本次未形成记录文字。"}</p></section>
         <dl className="record-grid">
           <div><dt>监测时间</dt><dd>{new Date(record.capture_time).toLocaleString("zh-CN", { hour12: false })}</dd></div>

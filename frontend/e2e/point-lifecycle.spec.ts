@@ -24,7 +24,8 @@ test("可创建点位、下载复测贴并进入基线采集", async ({ page }) 
   await expect(page).toHaveURL(new RegExp(`/points/${pointId}$`));
   await expect(page.getByTestId("baseline-status")).toHaveText("未建档");
   await expect(page.getByTestId("marker-ids")).toContainText("左");
-  await expect(page.getByRole("link", { name: "下载复测贴 PDF" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "下载复测贴 PDF" }))
+    .toHaveAttribute("href", new RegExp(`/api/points/${pointId}/sticker\\.pdf$`));
 
   await page.getByRole("link", { name: "采集基线" }).click();
   await expect(page).toHaveURL(new RegExp(`point=${pointId}&mode=baseline`));

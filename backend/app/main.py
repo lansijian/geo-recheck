@@ -217,14 +217,19 @@ def list_points(session: Session = Depends(get_db)) -> list[dict]:
     for point in points:
         last = session.scalar(
             select(Inspection)
-            .where(Inspection.monitor_point_id == point.monitor_point_id)
+            .where(
+                Inspection.monitor_point_id == point.monitor_point_id,
+                Inspection.human_confirmed.is_(True),
+            )
             .order_by(desc(Inspection.capture_time))
         )
         response.append(
             {
                 **point_to_dict(point),
-                "last_capture_time": last.capture_time.isoformat() if last else None,
-                "last_distance_mm": last.current_distance_mm if last else point.baseline_mm,
+                "last_confirmed_capture_time": last.capture_time.isoformat() if last else None,
+                "last_confirmed_opening_since_baseline_mm": (
+                    last.opening_since_baseline_mm if last else None
+                ),
                 "demo_ready": point.monitor_point_id == "MP-03",
             }
         )

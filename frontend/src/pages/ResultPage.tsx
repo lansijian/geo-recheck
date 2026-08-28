@@ -130,9 +130,9 @@ export default function ResultPage() {
               <h2>较基线累计</h2>
               <strong className="opening-number">{cumulativeText}</strong>
               <p>较上次 {perPeriodText}</p>
+              {result.shear_delta_mm != null ? <p>剪切变化 {result.shear_delta_mm >= 0 ? "+" : ""}{result.shear_delta_mm.toFixed(1)} mm</p> : null}
             </>
           )}
-          {result.shear_delta_mm != null ? <p>剪切变化 {result.shear_delta_mm >= 0 ? "+" : ""}{result.shear_delta_mm.toFixed(1)} mm</p> : null}
           <small>来自视觉标志 + 几何校正，不是大模型估算</small>
           {result.baseline_crack_width_mm != null ? (
             <div className="controlled-width-note">

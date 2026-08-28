@@ -49,9 +49,9 @@ export default function PointsPage() {
                   <span>{point.structure_name}</span>
                   <span className={`baseline-badge ${point.baseline_status}`}>{BASELINE_LABELS[point.baseline_status]}</span>
                   <span className="point-row-change">
-                    {point.last_capture_time
-                      ? `最近记录 ${point.last_distance_mm != null ? `${point.last_distance_mm.toFixed(1)} mm` : "—"}`
-                      : "尚无复测记录"}
+                    {point.last_confirmed_opening_since_baseline_mm != null
+                      ? `较基线累计 ${point.last_confirmed_opening_since_baseline_mm >= 0 ? "+" : ""}${point.last_confirmed_opening_since_baseline_mm.toFixed(1)} mm`
+                      : "尚无已确认记录"}
                   </span>
                 </div>
               </Link>
