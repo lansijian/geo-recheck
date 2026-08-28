@@ -1,0 +1,13 @@
+{
+  "name": "demo_webcam_profile",
+  "is_demo_profile": true,
+  "calibration_image_size": [1920, 1080],
+  "camera_matrix": [
+    [1500.0, 0.0, 960.0],
+    [0.0, 1500.0, 540.0],
+    [0.0, 0.0, 1.0]
+  ],
+  "distortion_coefficients": [0.0, 0.0, 0.0, 0.0, 0.0],
+  "warning": "演示相机配置；毫米结果仅用于合成基准。实拍前必须完成相机标定。"
+}
+

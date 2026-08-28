@@ -1,0 +1,14 @@
+{
+  "total_cases": 26,
+  "accepted_cases": 23,
+  "rejected_cases": 3,
+  "gate_expectation_matches": 26,
+  "mae_mm": 0.3052789935643308,
+  "median_error_mm": 0.2792841625640108,
+  "p95_error_mm": 0.8940963754661023,
+  "max_error_mm": 1.0031909553279945,
+  "rejection_rate": 0.11538461538461539,
+  "median_processing_ms": 44.32,
+  "p95_processing_ms": 214.94,
+  "claim_boundary": "Synthetic controlled benchmark only; no field accuracy claim."
+}
