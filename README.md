@@ -98,6 +98,8 @@ npm run e2e --prefix frontend
 
 V0.3 的受控几何验证结果仍保留在 `artifacts/validation_v03/`；这些数值只代表合成实验，不代表野外精度。
 
+V0.4 的逐项验收状态与 live/offline 证据边界见 [`docs/V0_4_COMPLETION_AUDIT.md`](docs/V0_4_COMPLETION_AUDIT.md)。
+
 ## Data & Attribution / 数据与来源边界
 
 - `REAL STORY`：人民网贵州公开报道中的基层监测员岗位与工作动作；

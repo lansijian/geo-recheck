@@ -5,6 +5,7 @@ import json
 import os
 import sys
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -48,6 +49,7 @@ def main() -> None:
 
     output = ROOT / "artifacts" / "stepfun_v04" / "live_smoke.json"
     output.parent.mkdir(parents=True, exist_ok=True)
+    checked_at = datetime.now(timezone.utc).isoformat()
     started = time.perf_counter()
     try:
         review, latency_ms, attempts = run_field_review(
@@ -58,6 +60,7 @@ def main() -> None:
         )
         result = {
             "status": "passed",
+            "checked_at": checked_at,
             "provider": "stepfun",
             "model": config.STEPFUN_MODEL,
             "image_count": 3,
@@ -68,6 +71,7 @@ def main() -> None:
     except StepFunReviewError as error:
         result = {
             "status": "failed",
+            "checked_at": checked_at,
             "provider": "stepfun",
             "model": config.STEPFUN_MODEL,
             "image_count": 3,

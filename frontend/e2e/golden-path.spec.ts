@@ -50,8 +50,36 @@ test("首页先讲真实监测员与每天巡查至少三次", async ({ page }) 
 
 test("StepFun 不可用时几何结果仍可确认并生成记录", async ({ page }) => {
   const failures = collectBrowserFailures(page);
+  await page.route("**/api/ai/status", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ enabled: true, configured: true, provider: "stepfun", model: "step-3.7-flash" }),
+    });
+  });
+  await page.route("**/api/inspections/**/ai-review", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        id: "fixture-failed-review",
+        inspection_id: "browser-fixture",
+        provider: "stepfun",
+        model: "step-3.7-flash",
+        status: "failed",
+        created_at: new Date().toISOString(),
+        latency_ms: 1851,
+        attempts: 0,
+        error_code: "quota",
+        error_message: "StepFun 配额暂不可用。",
+        parsed: null,
+        items: [],
+      }),
+    });
+  });
   await runOneMinuteDemo(page);
-  await expect(page.getByText(/AI 现场复核(暂不可用|未启用)/)).toBeVisible();
+  await expect(page.getByText("AI 现场复核暂不可用", { exact: true })).toBeVisible();
+  await expect(page.getByText(/配额暂不可用.*几何测量结果不受影响/)).toBeVisible();
   await expect(page.locator(".opening-number")).toContainText("mm");
   await page.getByRole("button", { name: "确认并生成记录" }).click();
   await expect(page).toHaveURL(/\/record\/[0-9a-f-]+$/);

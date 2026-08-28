@@ -11,8 +11,12 @@ from sqlalchemy import delete
 from app.db.session import Base, SessionLocal, engine
 from app.models import AIReview, AIReviewItem, Inspection
 from app.schemas.ai_review import AIFieldReview
-from app.services.ai_review import build_confirmed_record_text, decide_ai_review_item
-from app.services.stepfun_observer import ai_status, parse_review_response
+from app.services.ai_review import (
+    build_confirmed_record_text,
+    decide_ai_review_item,
+    run_and_persist_ai_review,
+)
+from app.services.stepfun_observer import StepFunReviewError, ai_status, parse_review_response
 
 
 FIXTURE = Path(__file__).parent / "fixtures" / "stepfun_response.json"
@@ -103,6 +107,44 @@ def test_human_decisions_control_final_record() -> None:
         assert "裂缝右下侧存在新增水迹" in record
         assert "已由监测员人工确认" in record
         assert "剥落" not in record
+
+        session.execute(delete(AIReviewItem).where(AIReviewItem.inspection_id == inspection_id))
+        session.execute(delete(AIReview).where(AIReview.inspection_id == inspection_id))
+        session.delete(inspection)
+        session.commit()
+
+
+def test_provider_failure_is_persisted_without_changing_geometry(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    Base.metadata.create_all(bind=engine)
+    inspection_id = str(uuid.uuid4())
+
+    def fail_review(*_args, **_kwargs):  # type: ignore[no-untyped-def]
+        raise StepFunReviewError("quota", "StepFun 配额暂不可用。")
+
+    monkeypatch.setattr("app.services.ai_review.run_field_review", fail_review)
+
+    with SessionLocal() as session:
+        inspection = Inspection(
+            id=inspection_id,
+            monitor_point_id="MP-03",
+            crack_id="CRACK-W01",
+            opening_delta_mm=4.8,
+            measurement_status="pending",
+            quality_score=0.9,
+        )
+        session.add(inspection)
+        session.commit()
+
+        result = run_and_persist_ai_review(session, inspection, "case_03_seepage")
+
+        assert result["status"] == "failed"
+        assert result["error_code"] == "quota"
+        assert result["items"] == []
+        session.refresh(inspection)
+        assert inspection.opening_delta_mm == 4.8
+        assert inspection.measurement_status == "pending"
 
         session.execute(delete(AIReviewItem).where(AIReviewItem.inspection_id == inspection_id))
         session.execute(delete(AIReview).where(AIReview.inspection_id == inspection_id))
