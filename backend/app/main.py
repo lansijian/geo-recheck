@@ -128,7 +128,7 @@ class BenchmarkTrialPayload(BaseModel):
 
 
 class AIReviewPayload(BaseModel):
-    case_id: str = Field(pattern=r"^case_[a-z0-9_]+$", max_length=64)
+    case_id: str | None = Field(default=None, pattern=r"^case_[a-z0-9_]+$", max_length=64)
 
 
 class AIReviewDecisionPayload(BaseModel):

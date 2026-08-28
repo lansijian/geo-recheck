@@ -146,6 +146,11 @@ export default function ResultPage() {
 
         <section className="ai-review-card" aria-live="polite">
           <header><div><p className="eyebrow">AI 现场复核 · 阶跃星辰</p><h2>补充肉眼要看的变化</h2></div>{aiStatus ? <span>{aiStatus.model}</span> : null}</header>
+          {result.context_photo_is_stale ? (
+            <p className="notice" role="status">
+              现场全景已是 {result.context_photo_captured_at?.slice(0, 10)} 拍摄，建议更新后再做 AI 复核。
+            </p>
+          ) : null}
           {aiBusy ? <div className="ai-loading"><span className="spinner" /><p>正在比较现场全景、上次近景与本次近景…</p></div> : null}
           {!aiBusy && (!aiStatus?.enabled || !aiStatus.configured) ? <div className="ai-unavailable"><strong>AI 现场复核未启用</strong><p>几何测量结果不受影响。</p></div> : null}
           {!aiBusy && aiReview?.status === "failed" ? <div className="ai-unavailable"><strong>AI 现场复核暂不可用</strong><p>{aiReview.error_message} 几何测量结果不受影响。</p><button className="button" type="button" onClick={() => void triggerAIReview()}>重新运行 AI 复核</button></div> : null}

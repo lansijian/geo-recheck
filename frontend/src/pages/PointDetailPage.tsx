@@ -83,6 +83,11 @@ export default function PointDetailPage() {
         <section className="point-detail-card">
           <p className="eyebrow">现场全景</p>
           {contextPhotoUrl ? <img className="context-photo-thumb" src={contextPhotoUrl} alt="现场全景缩略图" /> : <div className="empty">尚未上传现场全景</div>}
+          {point.context_photo_is_stale ? (
+            <p className="notice" role="status">
+              现场全景已是 {point.context_photo_captured_at?.slice(0, 10)} 拍摄，建议更新后再做 AI 复核。
+            </p>
+          ) : null}
           <label className="button upload-primary">
             {photoBusy ? "正在上传…" : "更新现场全景"}
             <input

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.config import SEED_ROOT
+from app.config import CONTEXT_PHOTO_STALE_DAYS, SEED_ROOT
 from app.cv.board_geometry import BoardSpec
 from app.models import MarkerAssignment, MonitorPoint
 
@@ -101,6 +102,11 @@ def point_to_dict(point: MonitorPoint) -> dict:
             point.context_photo_captured_at.isoformat()
             if point.context_photo_captured_at
             else None
+        ),
+        "context_photo_is_stale": (
+            point.context_photo_captured_at is not None
+            and point.context_photo_captured_at
+            < datetime.now() - timedelta(days=CONTEXT_PHOTO_STALE_DAYS)
         ),
     }
 

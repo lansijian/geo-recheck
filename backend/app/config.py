@@ -36,3 +36,4 @@ STEPFUN_MODEL = os.getenv("STEPFUN_MODEL", "step-3.7-flash").strip()
 STEPFUN_TIMEOUT_SECONDS = float(os.getenv("STEPFUN_TIMEOUT_SECONDS", "180"))
 STEPFUN_AI_REVIEW_ENABLED = os.getenv("STEPFUN_AI_REVIEW_ENABLED", "false").lower() == "true"
 STEPFUN_RESOLVE_IP = os.getenv("STEPFUN_RESOLVE_IP", "").strip() or None
+CONTEXT_PHOTO_STALE_DAYS = int(os.getenv("CONTEXT_PHOTO_STALE_DAYS", "90"))

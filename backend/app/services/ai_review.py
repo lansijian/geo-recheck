@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -10,23 +11,56 @@ from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
 from app import config
-from app.models import AIReview, AIReviewItem, Inspection
+from app.models import AIReview, AIReviewItem, Inspection, MonitorPoint
+from app.services.inspection import last_confirmed_inspection
 from app.services.stepfun_observer import StepFunReviewError, run_field_review
 
 
 DECISION_STATES = {"accepted", "rejected", "edited"}
 
 
-def _case_paths(case_id: str) -> tuple[Path, Path, Path]:
+@dataclass(frozen=True)
+class ReviewImages:
+    context: Path      # 图1 site overview: a constant reference, not a change input
+    previous: Path      # 图2 last confirmed close-up
+    current: Path      # 图3 this capture
+
+
+def _case_paths(case_id: str) -> ReviewImages:
     if not case_id.startswith("case_") or any(token in case_id for token in ("/", "\\", "..")):
         raise ValueError("Demo Case 编号无效。")
     case_root = (config.DEMO_CASES_ROOT / case_id).resolve()
     if case_root.parent != config.DEMO_CASES_ROOT.resolve() or not case_root.is_dir():
         raise ValueError("Demo Case 不存在。")
-    return (
+    return ReviewImages(
         case_root / "context.jpg",
         case_root / "previous_close.jpg",
         case_root / "current_close.jpg",
+    )
+
+
+def resolve_review_images(
+    session: Session, inspection: Inspection, case_id: str | None
+) -> ReviewImages:
+    if case_id:
+        return _case_paths(case_id)
+    if inspection.capture_mode == "baseline":
+        raise ValueError("首次建档没有可比较的上次近景，基线采集不提供 AI 现场复核。")
+    point = session.get(MonitorPoint, inspection.monitor_point_id)
+    if point is None or not point.context_photo_path:
+        raise ValueError("该监测点尚未上传现场全景，无法进行 AI 现场复核。")
+    previous = last_confirmed_inspection(
+        session, inspection.monitor_point_id, before=inspection.capture_time
+    )
+    if previous is None:
+        raise ValueError("该监测点没有上一次已确认记录，无法比较。")
+    context = config.EVIDENCE_ROOT / "points" / point.monitor_point_id / "context.jpg"
+    if not context.exists():
+        raise ValueError("该监测点的现场全景文件缺失，请重新上传。")
+    return ReviewImages(
+        context,
+        config.EVIDENCE_ROOT / previous.id / "original.png",
+        config.EVIDENCE_ROOT / inspection.id / "original.png",
     )
 
 
@@ -76,9 +110,9 @@ def ai_review_to_dict(session: Session, review: AIReview) -> dict[str, Any]:
 def run_and_persist_ai_review(
     session: Session,
     inspection: Inspection,
-    case_id: str,
+    case_id: str | None = None,
 ) -> dict[str, Any]:
-    context_path, previous_path, current_path = _case_paths(case_id)
+    images = resolve_review_images(session, inspection, case_id)
     review = AIReview(
         id=str(uuid.uuid4()),
         inspection_id=inspection.id,
@@ -87,14 +121,16 @@ def run_and_persist_ai_review(
         status="running",
         attempts=0,
     )
-    inspection.demo_case_id = case_id
+    if case_id:
+        inspection.demo_case_id = case_id
+    inspection.context_photo_used = str(images.context)
     session.add(review)
     session.commit()
     try:
         parsed, latency_ms, attempts = run_field_review(
-            context_path,
-            previous_path,
-            current_path,
+            images.context,
+            images.previous,
+            images.current,
             {
                 "crack_id": inspection.crack_id or "CRACK-W01",
                 "opening_delta_mm": (
@@ -160,7 +196,10 @@ def build_confirmed_record_text(session: Session, inspection: Inspection) -> str
     if inspection.opening_delta_mm is None:
         parts = ["本次几何测量未通过质量门控，未形成毫米结果。"]
     else:
-        parts = [f"本次裂缝较上期张开 {inspection.opening_delta_mm:.1f} mm。"]
+        parts = [f"本次裂缝较上期张开 {inspection.opening_delta_mm:.1f} mm"]
+        if inspection.opening_since_baseline_mm is not None:
+            parts.append(f"，自首次建档累计张开 {inspection.opening_since_baseline_mm:.1f} mm")
+        parts.append("。")
     review = latest_ai_review(session, inspection.id)
     accepted: list[str] = []
     if review and review.status == "completed":

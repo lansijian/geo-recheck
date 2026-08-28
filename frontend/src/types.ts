@@ -17,6 +17,7 @@ export type Point = {
   baseline_status: "missing" | "confirmed";
   context_photo_path: string | null;
   context_photo_captured_at: string | null;
+  context_photo_is_stale: boolean;
   last_confirmed_capture_time?: string | null;
   last_confirmed_opening_since_baseline_mm?: number | null;
   demo_ready?: boolean;
