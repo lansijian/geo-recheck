@@ -12,7 +12,7 @@ import numpy as np
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
-from app.config import CAMERA_PROFILE_PATH, DEMO_LOCATION_MODE, EVIDENCE_ROOT
+from app.config import CAMERA_PROFILE_PATH, DEMO_CASES_ROOT, DEMO_LOCATION_MODE, EVIDENCE_ROOT
 from app.cv.pipeline import measure_image
 from app.models import Inspection, MonitorPoint
 from app.services.registry import match_point, point_to_dict
@@ -100,6 +100,7 @@ def inspection_to_dict(inspection: Inspection, point: MonitorPoint) -> dict:
         "quality_metrics": metrics,
         "visible_change_note": inspection.visible_change_note,
         "remark": inspection.remark,
+        "demo_case_id": inspection.demo_case_id,
         "camera_profile": {
             "name": profile["name"],
             "is_demo_profile": profile.get("is_demo_profile", False),
@@ -121,7 +122,19 @@ def create_measurement(
     browser_lat: float | None,
     browser_lon: float | None,
     original_filename: str = "measurement.png",
+    demo_case_id: str | None = None,
 ) -> dict:
+    demo_case_valid = False
+    if demo_case_id:
+        case_path = (DEMO_CASES_ROOT / demo_case_id).resolve()
+        demo_case_valid = (
+            demo_case_id.startswith("case_")
+            and not any(token in demo_case_id for token in ("/", "\\", ".."))
+            and case_path.parent == DEMO_CASES_ROOT.resolve()
+            and case_path.is_dir()
+        )
+        if not demo_case_valid:
+            raise ValueError("Demo Case 编号无效或不存在。")
     array = np.frombuffer(raw_image, np.uint8)
     image = cv2.imdecode(array, cv2.IMREAD_COLOR)
     if image is None:
@@ -149,6 +162,8 @@ def create_measurement(
         raise ValueError(f"证据图生成失败：{', '.join(missing)}")
     logger.info("saved filename=original.png evidence_dir=%s", evidence_dir)
     point = match_point(session, result.marker_ids)
+    if point is None and demo_case_valid:
+        point = session.get(MonitorPoint, "MP-03")
     if point is None:
         raise ValueError("未能从左右视觉标靶自动匹配监测点。")
 
@@ -270,6 +285,7 @@ def create_measurement(
             ensure_ascii=False,
         ),
         remark=profile.get("warning") if profile.get("is_demo_profile") else None,
+        demo_case_id=demo_case_id,
     )
     session.add(record)
     session.commit()

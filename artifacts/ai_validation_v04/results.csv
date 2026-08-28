@@ -1,0 +1,16 @@
+﻿case_id,run,status,parse_success,expected_finding_hit,unsupported_finding_count,latency_ms,attempts,error_code
+case_01_stable,1,failed,False,,,2599,0,quota
+case_01_stable,2,failed,False,,,1755,0,quota
+case_01_stable,3,failed,False,,,2623,0,quota
+case_02_widening,1,failed,False,,,2204,0,quota
+case_02_widening,2,failed,False,,,1563,0,quota
+case_02_widening,3,failed,False,,,1868,0,quota
+case_03_seepage,1,failed,False,,,1547,0,quota
+case_03_seepage,2,failed,False,,,1444,0,quota
+case_03_seepage,3,failed,False,,,1628,0,quota
+case_04_spalling,1,failed,False,,,2090,0,quota
+case_04_spalling,2,failed,False,,,2181,0,quota
+case_04_spalling,3,failed,False,,,2020,0,quota
+case_05_quality_fail,1,failed,False,,,1555,0,quota
+case_05_quality_fail,2,failed,False,,,1535,0,quota
+case_05_quality_fail,3,failed,False,,,1585,0,quota

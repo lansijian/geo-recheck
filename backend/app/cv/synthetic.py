@@ -45,6 +45,8 @@ class SyntheticCase:
     noise_sigma: float = 1.2
     occlusion: str = "none"
     expected_gate: str = "accepted"
+    scene_index: int = 0
+    surface_change: str = "none"
 
 
 def _rotation_matrix(yaw_deg: float, pitch_deg: float, roll_deg: float = 0.0) -> np.ndarray:
@@ -116,11 +118,16 @@ def _resize_cover(image: np.ndarray, size: tuple[int, int], interpolation: int) 
     return resized[y0 : y0 + target_height, x0 : x0 + target_width]
 
 
-def _load_manifest_scene(manifest_path: Path) -> tuple[np.ndarray, np.ndarray, str] | None:
+def _load_manifest_scene(manifest_path: Path, scene_index: int = 0) -> tuple[np.ndarray, np.ndarray, str] | None:
     if not manifest_path.exists():
         return None
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    record = manifest[0] if isinstance(manifest, list) else manifest
+    if isinstance(manifest, list):
+        if not manifest:
+            return None
+        record = manifest[scene_index % len(manifest)]
+    else:
+        record = manifest
     source_file = Path(record["source_file"])
     mask_file = Path(record["mask_file"])
     project_root = manifest_path.parents[1]
@@ -135,9 +142,9 @@ def _load_manifest_scene(manifest_path: Path) -> tuple[np.ndarray, np.ndarray, s
     return image, np.where(mask > 127, 255, 0).astype(np.uint8), record["source_file"]
 
 
-def load_wall_source(dataset_root: Path | None, seed: int) -> tuple[np.ndarray, np.ndarray, str]:
+def load_wall_source(dataset_root: Path | None, seed: int, scene_index: int = 0) -> tuple[np.ndarray, np.ndarray, str]:
     if dataset_root:
-        loaded = _load_manifest_scene(dataset_root / "demo_scene_source_manifest.json")
+        loaded = _load_manifest_scene(dataset_root / "demo_scene_source_manifest.json", scene_index)
         if loaded:
             return loaded
     return _procedural_wall(seed)
@@ -190,14 +197,74 @@ def _render_crack(image: np.ndarray, mask: np.ndarray, crack_width_mm: float) ->
     image[:] = np.clip(image * (1.0 - alpha) + shadow * alpha, 0, 255).astype(np.uint8)
 
 
+def _apply_surface_change(image: np.ndarray, change: str, seed: int) -> None:
+    """Add a declared, deterministic visible change for the V0.4 field-review demo."""
+    if change == "none":
+        return
+    height, width = image.shape[:2]
+    rng = np.random.default_rng(seed + 4100)
+    mask = np.zeros((height, width), np.uint8)
+    center = (int(width * 0.66), int(height * 0.72))
+    if change == "controlled_water_stain":
+        for _ in range(13):
+            offset = rng.normal(0, (width * 0.055, height * 0.07), 2).astype(int)
+            axes = (
+                int(rng.uniform(width * 0.025, width * 0.075)),
+                int(rng.uniform(height * 0.035, height * 0.11)),
+            )
+            cv2.ellipse(mask, (center[0] + offset[0], center[1] + offset[1]), axes, 0, 0, 360, 255, -1)
+        mask = cv2.GaussianBlur(mask, (0, 0), 24)
+        alpha = (mask.astype(np.float32) / 255.0 * 0.46)[..., None]
+        stain = np.full_like(image, (55, 68, 52))
+        image[:] = np.clip(image * (1.0 - alpha) + stain * alpha, 0, 255).astype(np.uint8)
+        return
+    if change == "controlled_spalling":
+        for _ in range(17):
+            offset = rng.normal(0, (width * 0.035, height * 0.045), 2).astype(int)
+            axes = (
+                int(rng.uniform(width * 0.018, width * 0.055)),
+                int(rng.uniform(height * 0.022, height * 0.065)),
+            )
+            cv2.ellipse(
+                mask,
+                (int(width * 0.74) + offset[0], int(height * 0.65) + offset[1]),
+                axes,
+                float(rng.uniform(-35, 35)),
+                0,
+                360,
+                255,
+                -1,
+            )
+        texture_noise = rng.normal(0, 1, image.shape[:2]).astype(np.float32)
+        texture_noise = cv2.GaussianBlur(texture_noise, (0, 0), 4)
+        mask[(texture_noise > 0.32) & (mask > 0)] = 0
+        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((7, 7), np.uint8))
+        edge = cv2.dilate(mask, np.ones((5, 5), np.uint8)) - mask
+        texture = cv2.GaussianBlur(image, (0, 0), 2).astype(np.float32) * 0.72 + np.asarray(
+            (52, 51, 47), dtype=np.float32
+        )
+        texture_noise = rng.normal(0, 21, image.shape[:2]).astype(np.int16)
+        for channel in range(3):
+            texture[:, :, channel] = np.clip(texture[:, :, channel] + texture_noise, 0, 255)
+        texture = texture.astype(np.uint8)
+        image[mask > 0] = texture[mask > 0]
+        chips = (rng.random(image.shape[:2]) > 0.985) & (mask > 0)
+        image[chips] = (94, 98, 91)
+        image[edge > 0] = np.clip(image[edge > 0].astype(np.float32) * 0.72, 0, 255).astype(np.uint8)
+        return
+    raise ValueError(f"未知受控表面变化：{change}")
+
+
 def build_canonical_wall_plane(
     opening_delta_mm: float,
     shear_delta_mm: float,
     dataset_root: Path | None,
     seed: int,
     occlusion: str,
+    scene_index: int = 0,
+    surface_change: str = "none",
 ) -> tuple[np.ndarray, dict]:
-    wall, mask, source = load_wall_source(dataset_root, seed)
+    wall, mask, source = load_wall_source(dataset_root, seed, scene_index)
     split_x = _crack_center_x(mask)
     center_y = wall.shape[0] // 2
     half_separation_px = int(round(BASELINE_BOARD_SEPARATION_MM * SYNTHETIC_PIXELS_PER_MM / 2))
@@ -205,6 +272,7 @@ def build_canonical_wall_plane(
     _paste_texture(wall, make_board_texture(DEMO_RIGHT, SYNTHETIC_PIXELS_PER_MM), (split_x + half_separation_px, center_y))
     plane, moved_mask = _apply_controlled_deformation(wall, mask, opening_delta_mm, shear_delta_mm)
     _render_crack(plane, moved_mask, BASELINE_CRACK_WIDTH_MM + max(0.0, opening_delta_mm))
+    _apply_surface_change(plane, surface_change, seed)
     if occlusion in {"small", "right_two"}:
         right_x = split_x + half_separation_px + int(round(opening_delta_mm * SYNTHETIC_PIXELS_PER_MM))
         if occlusion == "small":
@@ -219,6 +287,7 @@ def build_canonical_wall_plane(
         "baseline_right_center_mm": [BASELINE_BOARD_SEPARATION_MM, 0.0],
         "current_right_center_mm": [BASELINE_BOARD_SEPARATION_MM + opening_delta_mm, shear_delta_mm],
         "coherent_plane": True,
+        "surface_change": surface_change,
     }
 
 
@@ -247,7 +316,15 @@ def render_case(
     seed: int = 7,
 ) -> tuple[np.ndarray, dict]:
     del baseline_mm
-    plane, physical = build_canonical_wall_plane(case.delta_mm, case.shear_delta_mm, dataset_root, seed, case.occlusion)
+    plane, physical = build_canonical_wall_plane(
+        case.delta_mm,
+        case.shear_delta_mm,
+        dataset_root,
+        seed,
+        case.occlusion,
+        case.scene_index,
+        case.surface_change,
+    )
     homography = _camera_homography(case.yaw_deg, case.pitch_deg)
     output = np.full((IMAGE_SIZE[1], IMAGE_SIZE[0], 3), (224, 226, 222), np.uint8)
     warped = cv2.warpPerspective(plane, homography, IMAGE_SIZE)

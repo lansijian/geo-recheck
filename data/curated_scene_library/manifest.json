@@ -1,0 +1,208 @@
+[
+  {
+    "scene_id": "v04_scene_01",
+    "dataset": "Wall Crack Image Dataset for Earthquake and Structural Health Analysis",
+    "source_url": "https://data.mendeley.com/datasets/hxrry6krs7/1",
+    "doi": "10.17632/hxrry6krs7.1",
+    "license": "CC BY 4.0",
+    "source_filename": "SA_crack_78.jpg",
+    "source_file_id": "e55aec77-d6e3-4410-a4bd-79a35070e5da",
+    "source_sha256": "5e026079d1b00685b10d8283d01e93d4b1e996bbac8a0bc66ec4f986c9fdd28a",
+    "curated_file": "data/curated_scene_library/scene_01.jpg",
+    "transforms": [
+      "resize_cover_1440x960",
+      "jpeg_quality_91"
+    ],
+    "is_real_guizhou_monitoring_data": false
+  },
+  {
+    "scene_id": "v04_scene_02",
+    "dataset": "Wall Crack Image Dataset for Earthquake and Structural Health Analysis",
+    "source_url": "https://data.mendeley.com/datasets/hxrry6krs7/1",
+    "doi": "10.17632/hxrry6krs7.1",
+    "license": "CC BY 4.0",
+    "source_filename": "OH_crack_7.jpg",
+    "source_file_id": "6b213a69-0e71-4edb-be2c-bdfad0f3ea52",
+    "source_sha256": "5f5ca39bb7e41559f6bc54f47c8d3947b30318786c238a6196a3908b16737a8d",
+    "curated_file": "data/curated_scene_library/scene_02.jpg",
+    "transforms": [
+      "resize_cover_1440x960",
+      "jpeg_quality_91"
+    ],
+    "is_real_guizhou_monitoring_data": false
+  },
+  {
+    "scene_id": "v04_scene_03",
+    "dataset": "Wall Crack Image Dataset for Earthquake and Structural Health Analysis",
+    "source_url": "https://data.mendeley.com/datasets/hxrry6krs7/1",
+    "doi": "10.17632/hxrry6krs7.1",
+    "license": "CC BY 4.0",
+    "source_filename": "RA_CRACK_IMG (131).jpg",
+    "source_file_id": "c64f043c-4cf1-43d3-9dc5-bd14e21dbeba",
+    "source_sha256": "399c938b123cf6ad24b14373389f5be4c9d6893f42d7b3091f417756b58bdc60",
+    "curated_file": "data/curated_scene_library/scene_03.jpg",
+    "transforms": [
+      "resize_cover_1440x960",
+      "jpeg_quality_91"
+    ],
+    "is_real_guizhou_monitoring_data": false
+  },
+  {
+    "scene_id": "v04_scene_04",
+    "dataset": "Wall Crack Image Dataset for Earthquake and Structural Health Analysis",
+    "source_url": "https://data.mendeley.com/datasets/hxrry6krs7/1",
+    "doi": "10.17632/hxrry6krs7.1",
+    "license": "CC BY 4.0",
+    "source_filename": "RA_CRACK_IMG 32.jpg",
+    "source_file_id": "5cf4a457-9502-447e-ad00-573a2e9e4962",
+    "source_sha256": "c2b61e0be684c450a0c95482fe1ea3e0b1eefa25ebe63413ac4a897a16f263fb",
+    "curated_file": "data/curated_scene_library/scene_04.jpg",
+    "transforms": [
+      "resize_cover_1440x960",
+      "jpeg_quality_91"
+    ],
+    "is_real_guizhou_monitoring_data": false
+  },
+  {
+    "scene_id": "v04_scene_05",
+    "dataset": "Wall Crack Image Dataset for Earthquake and Structural Health Analysis",
+    "source_url": "https://data.mendeley.com/datasets/hxrry6krs7/1",
+    "doi": "10.17632/hxrry6krs7.1",
+    "license": "CC BY 4.0",
+    "source_filename": "OH_crack_56.jpg",
+    "source_file_id": "7306a244-e8c5-446f-8772-d22ed81e3e7d",
+    "source_sha256": "a38b13933b17a1d5db7ff5715c2cc296ca9437b129579ee663354a386ec81837",
+    "curated_file": "data/curated_scene_library/scene_05.jpg",
+    "transforms": [
+      "resize_cover_1440x960",
+      "jpeg_quality_91"
+    ],
+    "is_real_guizhou_monitoring_data": false
+  },
+  {
+    "scene_id": "v04_scene_06",
+    "dataset": "Wall Crack Image Dataset for Earthquake and Structural Health Analysis",
+    "source_url": "https://data.mendeley.com/datasets/hxrry6krs7/1",
+    "doi": "10.17632/hxrry6krs7.1",
+    "license": "CC BY 4.0",
+    "source_filename": "RA_CRACK_IMG(79).jpg",
+    "source_file_id": "d9e1f135-70f9-4f9f-bd89-f3e1d4b24a26",
+    "source_sha256": "bb302bbb73f0bc602cc88831a35390d3ed835205c065e8214bf9d80e1c5c252e",
+    "curated_file": "data/curated_scene_library/scene_06.jpg",
+    "transforms": [
+      "resize_cover_1440x960",
+      "jpeg_quality_91"
+    ],
+    "is_real_guizhou_monitoring_data": false
+  },
+  {
+    "scene_id": "v04_scene_07",
+    "dataset": "Wall Crack Image Dataset for Earthquake and Structural Health Analysis",
+    "source_url": "https://data.mendeley.com/datasets/hxrry6krs7/1",
+    "doi": "10.17632/hxrry6krs7.1",
+    "license": "CC BY 4.0",
+    "source_filename": "RA_CRACK_IMG (142).jpg",
+    "source_file_id": "8866a13d-a161-42c3-bb12-c18d69a2dc20",
+    "source_sha256": "887d2588d30c75a4356825567c2f3f5d609bf11349cb91e819d0ae0c6f8d26e0",
+    "curated_file": "data/curated_scene_library/scene_07.jpg",
+    "transforms": [
+      "resize_cover_1440x960",
+      "jpeg_quality_91"
+    ],
+    "is_real_guizhou_monitoring_data": false
+  },
+  {
+    "scene_id": "v04_scene_08",
+    "dataset": "Wall Crack Image Dataset for Earthquake and Structural Health Analysis",
+    "source_url": "https://data.mendeley.com/datasets/hxrry6krs7/1",
+    "doi": "10.17632/hxrry6krs7.1",
+    "license": "CC BY 4.0",
+    "source_filename": "RA_CRACK_IMG(91).jpeg",
+    "source_file_id": "c5ee98cb-7ea9-4a36-9409-8be2bc16259a",
+    "source_sha256": "bfaaefbb3117dba2794d88e2024ecec55637027b121cb6ff2d31b07422fd7bf1",
+    "curated_file": "data/curated_scene_library/scene_08.jpg",
+    "transforms": [
+      "resize_cover_1440x960",
+      "jpeg_quality_91"
+    ],
+    "is_real_guizhou_monitoring_data": false
+  },
+  {
+    "scene_id": "v04_scene_09",
+    "dataset": "Wall Crack Image Dataset for Earthquake and Structural Health Analysis",
+    "source_url": "https://data.mendeley.com/datasets/hxrry6krs7/1",
+    "doi": "10.17632/hxrry6krs7.1",
+    "license": "CC BY 4.0",
+    "source_filename": "RA_CRACK_IMG(82).jpg",
+    "source_file_id": "fe8693cd-8380-4c21-b529-e1efa0f8f884",
+    "source_sha256": "0097dd17f6d37cf8751a1a940595024f1d3c6d493d2e9d2fc92cdec8f8f9709f",
+    "curated_file": "data/curated_scene_library/scene_09.jpg",
+    "transforms": [
+      "resize_cover_1440x960",
+      "jpeg_quality_91"
+    ],
+    "is_real_guizhou_monitoring_data": false
+  },
+  {
+    "scene_id": "v04_scene_10",
+    "dataset": "Wall Crack Image Dataset for Earthquake and Structural Health Analysis",
+    "source_url": "https://data.mendeley.com/datasets/hxrry6krs7/1",
+    "doi": "10.17632/hxrry6krs7.1",
+    "license": "CC BY 4.0",
+    "source_filename": "RA_CRACK_IMG(93).jpeg",
+    "source_file_id": "d4a2fa48-f15e-4ffe-ba17-2b55f3dc2f2d",
+    "source_sha256": "129afce3d84f8ea46c51825b6dadb45d5f1ef7f7e8c17adcb8f84a41e1bc5c4b",
+    "curated_file": "data/curated_scene_library/scene_10.jpg",
+    "transforms": [
+      "resize_cover_1440x960",
+      "jpeg_quality_91"
+    ],
+    "is_real_guizhou_monitoring_data": false
+  },
+  {
+    "scene_id": "v04_scene_11",
+    "dataset": "Wall Crack Image Dataset for Earthquake and Structural Health Analysis",
+    "source_url": "https://data.mendeley.com/datasets/hxrry6krs7/1",
+    "doi": "10.17632/hxrry6krs7.1",
+    "license": "CC BY 4.0",
+    "source_filename": "SA_crack_91.jpg",
+    "source_file_id": "84e9d9cf-cada-4100-861a-713418957661",
+    "source_sha256": "68084ee9265c58f5df56f3556c33b599f9118e38508a3cb5a95fe103b970bfb6",
+    "curated_file": "data/curated_scene_library/scene_11.jpg",
+    "transforms": [
+      "resize_cover_1440x960",
+      "jpeg_quality_91"
+    ],
+    "is_real_guizhou_monitoring_data": false
+  },
+  {
+    "scene_id": "v04_scene_12",
+    "dataset": "Wall Crack Image Dataset for Earthquake and Structural Health Analysis",
+    "source_url": "https://data.mendeley.com/datasets/hxrry6krs7/1",
+    "doi": "10.17632/hxrry6krs7.1",
+    "license": "CC BY 4.0",
+    "source_filename": "RA_CRACK_IMG(75).jpg",
+    "source_file_id": "2a6fd3b9-2b7b-445a-817c-a84fcab33655",
+    "source_sha256": "f1ca32f0f272e68f4cbfc5b6cc101eeb6ece5c5be0763eb74c39f627dc13e9ce",
+    "curated_file": "data/curated_scene_library/scene_12.jpg",
+    "transforms": [
+      "resize_cover_1440x960",
+      "jpeg_quality_91"
+    ],
+    "is_real_guizhou_monitoring_data": false
+  },
+  {
+    "scene_id": "v04_facade_context_01",
+    "dataset": "Pixnio public-domain architecture image",
+    "source_url": "https://pixnio.com/architecture/buildings/architecture-building-city-window-house-wall-urban-street-old-home-brick",
+    "license": "CC0",
+    "source_filename": "2017-09-11-08-39-51-1536x1024.jpg",
+    "source_sha256": "eb163ac2738d03f8ef747e8101fb8c0327e2335ff9e6c0d8716361a618941744",
+    "curated_file": "data/curated_scene_library/site_overview_cc0.jpg",
+    "transforms": [
+      "downloaded_1536x1024_derivative"
+    ],
+    "usage": "homepage full-facade field context only",
+    "is_real_guizhou_monitoring_data": false
+  }
+]

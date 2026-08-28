@@ -1,0 +1,23 @@
+{
+  "scene_consistency": "same_location",
+  "observations": [
+    {
+      "type": "seepage_or_water_stain",
+      "state": "new",
+      "evidence": "本次裂缝右下侧可见颜色加深区域，上次近景中未见同样范围。",
+      "confidence": "medium",
+      "requires_human_check": true
+    },
+    {
+      "type": "marker_damage",
+      "state": "stable",
+      "evidence": "本次近景中的复测标志边界完整可见。",
+      "confidence": "high",
+      "requires_human_check": true
+    }
+  ],
+  "coverage_complete": true,
+  "missing_views": [],
+  "record_draft": "本次照片中裂缝右下侧可见新增水迹，复测标志完整可见，待监测员确认。",
+  "disclaimer": "以上仅为可见现象辅助复核，需监测员人工确认，不构成地质灾害风险判断。"
+}

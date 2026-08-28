@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import cv2
 from fastapi.testclient import TestClient
 from sqlalchemy import delete
@@ -85,3 +87,31 @@ def test_benchmark_trial_summary() -> None:
                 if record:
                     session.delete(record)
             session.commit()
+
+
+def test_demo_quality_failure_persists_rejected_evidence_without_millimeters() -> None:
+    root = Path(__file__).resolve().parents[2]
+    image = root / "data" / "demo_cases" / "case_05_quality_fail" / "current_close.jpg"
+    created_id: str | None = None
+    try:
+        with TestClient(app) as client:
+            reset_measurement_baseline()
+            measured = client.post(
+                "/api/measure",
+                files={"image": (image.name, image.read_bytes(), "image/jpeg")},
+                data={"demo_case_id": "case_05_quality_fail"},
+            )
+            assert measured.status_code == 200, measured.text
+            payload = measured.json()
+            created_id = payload["id"]
+            assert payload["status"] == "rejected"
+            assert payload["opening_delta_mm"] is None
+            assert payload["demo_case_id"] == "case_05_quality_fail"
+            assert payload["evidence"]["original"]
+    finally:
+        if created_id:
+            with SessionLocal() as session:
+                record = session.get(Inspection, created_id)
+                if record:
+                    session.delete(record)
+                    session.commit()

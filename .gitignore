@@ -20,6 +20,9 @@ artifacts/markers/
 artifacts/calibration/
 artifacts/validation/evidence/
 artifacts/validation_v03/evidence/
+artifacts/validation_v04_cases/evidence/
+artifacts/*_stdout.log
+artifacts/*_stderr.log
 artifacts/playwright/
 artifacts/playwright-report/
 artifacts/ui_v03/

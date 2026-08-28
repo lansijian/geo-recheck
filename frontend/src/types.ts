@@ -76,6 +76,69 @@ export type Measurement = Point & {
   camera_profile?: { name: string; is_demo_profile: boolean };
   marker_ids?: number[];
   remark?: string | null;
+  demo_case_id?: string | null;
+  ai_review?: AIReview | null;
+  record_text?: string;
+};
+
+export type AIObservationType =
+  | "new_crack"
+  | "crack_extension"
+  | "seepage_or_water_stain"
+  | "spalling_or_peeling"
+  | "wall_surface_change"
+  | "marker_damage"
+  | "coverage_missing"
+  | "other_visible_change"
+  | "none";
+
+export type AIReviewItem = {
+  id: number;
+  type: AIObservationType;
+  state: "new" | "worsened" | "stable" | "uncertain" | "not_visible";
+  evidence: string;
+  confidence: "high" | "medium" | "low";
+  requires_human_check: true;
+  human_status: "pending" | "accepted" | "rejected" | "edited";
+  edited_evidence: string | null;
+};
+
+export type AIReview = {
+  id: string;
+  inspection_id: string;
+  provider: "stepfun";
+  model: string;
+  status: "running" | "completed" | "failed";
+  created_at: string;
+  latency_ms: number | null;
+  attempts: number;
+  error_code: string | null;
+  error_message: string | null;
+  items: AIReviewItem[];
+  parsed?: {
+    scene_consistency: "same_location" | "likely_same" | "uncertain";
+    coverage_complete: boolean | null;
+    missing_views: string[];
+    record_draft: string;
+    disclaimer: string;
+  } | null;
+};
+
+export type AIStatus = {
+  enabled: boolean;
+  provider: "stepfun";
+  model: string;
+  configured: boolean;
+};
+
+export type DemoCase = {
+  case_id: string;
+  title: string;
+  expected_geometry: { opening_delta_mm: number; gate: "accepted" | "rejected" };
+  expected_ai_observations: AIObservationType[];
+  context_callouts: { id: string; label: string; x: number; y: number }[];
+  disclosure: string;
+  assets: { context: string; previous_close: string; current_close: string };
 };
 
 export type ModeSummary = {

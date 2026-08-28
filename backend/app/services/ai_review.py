@@ -1,0 +1,180 @@
+from __future__ import annotations
+
+import json
+import uuid
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+from sqlalchemy import desc, select
+from sqlalchemy.orm import Session
+
+from app import config
+from app.models import AIReview, AIReviewItem, Inspection
+from app.services.stepfun_observer import StepFunReviewError, run_field_review
+
+
+DECISION_STATES = {"accepted", "rejected", "edited"}
+
+
+def _case_paths(case_id: str) -> tuple[Path, Path, Path]:
+    if not case_id.startswith("case_") or any(token in case_id for token in ("/", "\\", "..")):
+        raise ValueError("Demo Case 编号无效。")
+    case_root = (config.DEMO_CASES_ROOT / case_id).resolve()
+    if case_root.parent != config.DEMO_CASES_ROOT.resolve() or not case_root.is_dir():
+        raise ValueError("Demo Case 不存在。")
+    return (
+        case_root / "context.jpg",
+        case_root / "previous_close.jpg",
+        case_root / "current_close.jpg",
+    )
+
+
+def latest_ai_review(session: Session, inspection_id: str) -> AIReview | None:
+    return session.scalar(
+        select(AIReview)
+        .where(AIReview.inspection_id == inspection_id)
+        .order_by(desc(AIReview.created_at), desc(AIReview.id))
+    )
+
+
+def ai_review_to_dict(session: Session, review: AIReview) -> dict[str, Any]:
+    items = session.scalars(
+        select(AIReviewItem)
+        .where(AIReviewItem.review_id == review.id)
+        .order_by(AIReviewItem.item_index)
+    ).all()
+    parsed = json.loads(review.parsed_json) if review.parsed_json else None
+    return {
+        "id": review.id,
+        "inspection_id": review.inspection_id,
+        "provider": review.provider,
+        "model": review.model,
+        "status": review.status,
+        "parsed": parsed,
+        "created_at": review.created_at.isoformat(),
+        "latency_ms": review.latency_ms,
+        "attempts": review.attempts,
+        "error_code": review.error_code,
+        "error_message": review.error_message,
+        "items": [
+            {
+                "id": item.id,
+                "type": item.observation_type,
+                "state": item.observation_state,
+                "evidence": item.evidence,
+                "confidence": item.confidence,
+                "requires_human_check": item.requires_human_check,
+                "human_status": item.human_status,
+                "edited_evidence": item.edited_evidence,
+            }
+            for item in items
+        ],
+    }
+
+
+def run_and_persist_ai_review(
+    session: Session,
+    inspection: Inspection,
+    case_id: str,
+) -> dict[str, Any]:
+    context_path, previous_path, current_path = _case_paths(case_id)
+    review = AIReview(
+        id=str(uuid.uuid4()),
+        inspection_id=inspection.id,
+        provider="stepfun",
+        model=config.STEPFUN_MODEL,
+        status="running",
+        attempts=0,
+    )
+    inspection.demo_case_id = case_id
+    session.add(review)
+    session.commit()
+    try:
+        parsed, latency_ms, attempts = run_field_review(
+            context_path,
+            previous_path,
+            current_path,
+            {
+                "crack_id": inspection.crack_id or "CRACK-W01",
+                "opening_delta_mm": inspection.opening_delta_mm,
+            },
+        )
+    except StepFunReviewError as error:
+        review.status = "failed"
+        review.error_code = error.code
+        review.error_message = str(error)
+        session.commit()
+        return ai_review_to_dict(session, review)
+
+    review.status = "completed"
+    review.parsed_json = parsed.model_dump_json()
+    review.latency_ms = latency_ms
+    review.attempts = attempts
+    for index, observation in enumerate(parsed.observations):
+        session.add(
+            AIReviewItem(
+                review_id=review.id,
+                inspection_id=inspection.id,
+                item_index=index,
+                observation_type=observation.type,
+                observation_state=observation.state,
+                evidence=observation.evidence,
+                confidence=observation.confidence,
+                requires_human_check=True,
+                human_status="pending",
+            )
+        )
+    session.commit()
+    return ai_review_to_dict(session, review)
+
+
+def decide_ai_review_item(
+    session: Session,
+    inspection_id: str,
+    item_id: int,
+    decision: str,
+    edited_evidence: str | None = None,
+) -> dict[str, Any]:
+    if decision not in DECISION_STATES:
+        raise ValueError("人工处理状态必须为 accepted、rejected 或 edited。")
+    item = session.get(AIReviewItem, item_id)
+    if item is None or item.inspection_id != inspection_id:
+        raise LookupError("AI 观察项不存在。")
+    if decision == "edited" and not (edited_evidence or "").strip():
+        raise ValueError("编辑采纳时必须填写人工修改后的观察。")
+    item.human_status = decision
+    item.edited_evidence = edited_evidence.strip() if edited_evidence else None
+    item.updated_at = datetime.utcnow()
+    session.commit()
+    review = session.get(AIReview, item.review_id)
+    return ai_review_to_dict(session, review)
+
+
+def build_confirmed_record_text(session: Session, inspection: Inspection) -> str:
+    if inspection.opening_delta_mm is None:
+        parts = ["本次几何测量未通过质量门控，未形成毫米结果。"]
+    else:
+        parts = [f"本次裂缝较上期张开 {inspection.opening_delta_mm:.1f} mm。"]
+    review = latest_ai_review(session, inspection.id)
+    accepted: list[str] = []
+    if review and review.status == "completed":
+        items = session.scalars(
+            select(AIReviewItem)
+            .where(
+                AIReviewItem.review_id == review.id,
+                AIReviewItem.human_status.in_(("accepted", "edited")),
+                AIReviewItem.observation_type != "none",
+            )
+            .order_by(AIReviewItem.item_index)
+        ).all()
+        accepted = [
+            (item.edited_evidence if item.human_status == "edited" else item.evidence)
+            for item in items
+        ]
+    if accepted:
+        parts.extend(f"{text}，已由监测员人工确认。" for text in accepted)
+    else:
+        parts.append("未纳入其他 AI 可见变化观察。")
+    parts.append("本记录不构成地质灾害风险判断。")
+    return "".join(parts)

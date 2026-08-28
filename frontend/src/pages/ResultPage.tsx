@@ -1,13 +1,27 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { addBenchmarkTrial, confirmMeasurement, evidenceUrl, getInspection } from "../api/client";
-import type { Measurement } from "../types";
+import { addBenchmarkTrial, confirmMeasurement, decideAIReviewItem, evidenceUrl, getAIStatus, getInspection, runAIReview } from "../api/client";
+import type { AIReview, AIReviewItem, AIStatus, Measurement } from "../types";
 
 type PreviewImage = { src: string; alt: string };
 
+const OBSERVATION_LABELS: Record<AIReviewItem["type"], string> = {
+  new_crack: "疑似新裂缝",
+  crack_extension: "既有裂缝可见延伸",
+  seepage_or_water_stain: "疑似新增水迹",
+  spalling_or_peeling: "疑似局部剥落",
+  wall_surface_change: "墙面可见变化",
+  marker_damage: "复测标志状态",
+  coverage_missing: "图片覆盖不足",
+  other_visible_change: "其他可见变化",
+  none: "未见明确新增变化",
+};
+
+const CONFIDENCE_LABELS = { high: "高", medium: "中", low: "低" } as const;
+
 function LoadedEvidence({ src, alt, label, onOpen }: { src: string | null | undefined; alt: string; label: string; onOpen: (image: PreviewImage) => void }) {
   const url = evidenceUrl(src);
-  if (!url) return <div className="evidence-empty">{label}：暂无历史影像</div>;
+  if (!url) return <div className="evidence-empty">{label}：暂无影像</div>;
   return <figure><button className="image-button" type="button" onClick={() => onOpen({ src: url, alt })}><img src={url} alt={alt} /></button><figcaption>{label}<span>点击放大</span></figcaption></figure>;
 }
 
@@ -15,30 +29,53 @@ export default function ResultPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [result, setResult] = useState<Measurement | null>(null);
+  const [aiReview, setAIReview] = useState<AIReview | null>(null);
+  const [aiStatus, setAIStatus] = useState<AIStatus | null>(null);
   const [observer, setObserver] = useState("演示监测员");
   const [remark, setRemark] = useState("");
   const [busy, setBusy] = useState(false);
+  const [aiBusy, setAIBusy] = useState(false);
   const [loading, setLoading] = useState(Boolean(id));
   const [error, setError] = useState("");
   const [previewImage, setPreviewImage] = useState<PreviewImage | null>(null);
+  const autoReviewStarted = useRef(false);
 
   useEffect(() => {
     if (!id) return;
     let active = true;
-    getInspection(id).then((value) => { if (active) setResult(value); }).catch((reason: unknown) => { if (active) setError(reason instanceof Error ? reason.message : "结果加载失败"); }).finally(() => { if (active) setLoading(false); });
+    Promise.all([getInspection(id), getAIStatus()])
+      .then(([measurement, status]) => {
+        if (!active) return;
+        setResult(measurement);
+        setAIReview(measurement.ai_review ?? null);
+        setAIStatus(status);
+      })
+      .catch((reason: unknown) => { if (active) setError(reason instanceof Error ? reason.message : "结果加载失败"); })
+      .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [id]);
 
-  if (!id) return <section className="page"><div className="empty">结果地址缺少记录 ID。<button className="button primary" type="button" onClick={() => navigate("/capture")}>开始复测</button></div></section>;
-  if (loading) return <section className="page"><div className="empty">正在恢复这次墙缝复测结果…</div></section>;
-  if (error && !result) return <section className="page"><div className="notice error">{error}<button className="button" type="button" onClick={() => navigate("/capture")}>重新复测</button></div></section>;
-  if (!result) return null;
+  async function triggerAIReview(measurement = result) {
+    if (!measurement?.demo_case_id) return;
+    setAIBusy(true);
+    setError("");
+    try { setAIReview(await runAIReview(measurement.id, measurement.demo_case_id)); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : "AI 现场复核请求失败"); }
+    finally { setAIBusy(false); }
+  }
 
-  const accepted = result.status === "pending";
-  const metrics = result.quality_metrics ?? {};
-  const opening = result.opening_delta_mm ?? result.delta_mm;
-  const openingText = opening == null ? "未输出" : `${opening >= 0 ? "+" : ""}${opening.toFixed(1)} mm`;
-  const currentWidth = opening != null && result.baseline_crack_width_mm != null ? result.baseline_crack_width_mm + opening : null;
+  useEffect(() => {
+    if (!result?.demo_case_id || result.ai_review || !aiStatus?.enabled || !aiStatus.configured || autoReviewStarted.current) return;
+    autoReviewStarted.current = true;
+    void triggerAIReview(result);
+  }, [aiStatus, result]);
+
+  async function decide(itemId: number, decision: "accepted" | "rejected") {
+    if (!result) return;
+    setError("");
+    try { setAIReview(await decideAIReviewItem(result.id, itemId, decision)); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : "人工确认保存失败"); }
+  }
 
   async function confirm() {
     if (!result) return;
@@ -52,69 +89,71 @@ export default function ResultPage() {
         sessionStorage.removeItem("geo-recheck:system-started");
       }
       navigate(`/record/${confirmed.id}`);
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "确认失败");
-    } finally {
-      setBusy(false);
-    }
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "确认失败"); }
+    finally { setBusy(false); }
   }
+
+  if (!id) return <section className="page"><div className="empty">结果地址缺少记录 ID。</div></section>;
+  if (loading) return <section className="page"><div className="empty">正在恢复本次复测结果…</div></section>;
+  if (error && !result) return <section className="page"><div className="notice error">{error}</div></section>;
+  if (!result) return null;
+
+  const accepted = result.status === "pending";
+  const metrics = result.quality_metrics ?? {};
+  const opening = result.opening_delta_mm ?? result.delta_mm;
+  const openingText = opening == null ? "未输出" : `${opening >= 0 ? "+" : ""}${opening.toFixed(1)} mm`;
+  const caseBase = result.demo_case_id ? `/demo-cases/${result.demo_case_id}` : null;
+  const pendingCount = aiReview?.items.filter((item) => item.human_status === "pending").length ?? 0;
 
   return (
     <section className="page result-page human-result">
       <div className="result-heading">
-        <div><p className="eyebrow">贵州仁怀 · 墙体裂缝复测</p><h1>{result.crack_id}</h1><p>根据公开工作场景复原，非真实监测记录</p></div>
-        <span className={`status-pill ${accepted ? "ok" : "warning"}`}>{accepted ? "质量通过 · 等待人工确认" : "质量未通过 · 请重新拍摄"}</span>
+        <div><p className="eyebrow">定量：OpenCV · 定性：StepFun · 决策：监测员</p><h1>{result.crack_id}</h1><p>公开场景复原与受控变化，非真实监测记录</p></div>
+        <span className={`status-pill ${accepted ? "ok" : "warning"}`}>{accepted ? "几何质量通过 · 等待人工确认" : "几何质量未通过 · 请重新拍摄"}</span>
       </div>
 
-      <section className={`opening-hero ${accepted ? "" : "rejected"}`}>
-        <span>较上次张开</span>
-        <strong className="opening-number">{openingText}</strong>
-        {result.shear_delta_mm != null ? <p>剪切变化 {result.shear_delta_mm >= 0 ? "+" : ""}{result.shear_delta_mm.toFixed(1)} mm</p> : null}
-        <small>只记录相对变形，不判断灾害风险</small>
+      <div className="result-columns">
+        <section className={`geometry-card ${accepted ? "" : "rejected"}`}>
+          <p className="eyebrow">几何复测</p><h2>较上次张开</h2>
+          <strong className="opening-number">{openingText}</strong>
+          {result.shear_delta_mm != null ? <p>剪切变化 {result.shear_delta_mm >= 0 ? "+" : ""}{result.shear_delta_mm.toFixed(1)} mm</p> : null}
+          <small>来自视觉标志 + 几何校正，不是大模型估算</small>
+          <div className="geometry-proof"><span>标志识别</span><span>正视校正</span><span>质量门控</span></div>
+        </section>
+
+        <section className="ai-review-card" aria-live="polite">
+          <header><div><p className="eyebrow">AI 现场复核 · 阶跃星辰</p><h2>补充肉眼要看的变化</h2></div>{aiStatus ? <span>{aiStatus.model}</span> : null}</header>
+          {aiBusy ? <div className="ai-loading"><span className="spinner" /><p>正在比较现场全景、上次近景与本次近景…</p></div> : null}
+          {!aiBusy && (!aiStatus?.enabled || !aiStatus.configured) ? <div className="ai-unavailable"><strong>AI 现场复核未启用</strong><p>几何测量结果不受影响。</p></div> : null}
+          {!aiBusy && aiReview?.status === "failed" ? <div className="ai-unavailable"><strong>AI 现场复核暂不可用</strong><p>{aiReview.error_message} 几何测量结果不受影响。</p><button className="button" type="button" onClick={() => void triggerAIReview()}>重新运行 AI 复核</button></div> : null}
+          {!aiBusy && aiReview?.status === "completed" ? <div className="finding-list">
+            {aiReview.items.map((item) => <article className={`finding ${item.human_status}`} key={item.id}>
+              <div><span className="finding-mark">{item.type === "none" || item.state === "stable" ? "✓" : "!"}</span><div><h3>{OBSERVATION_LABELS[item.type]}</h3><p>{item.edited_evidence ?? item.evidence}</p><small>置信度：{CONFIDENCE_LABELS[item.confidence]} · 必须人工确认</small></div></div>
+              <div className="finding-actions">
+                {item.human_status === "pending" ? <><button type="button" onClick={() => void decide(item.id, "accepted")}>确认</button><button type="button" onClick={() => void decide(item.id, "rejected")}>不采纳</button></> : <span>{item.human_status === "accepted" ? "已确认" : item.human_status === "rejected" ? "未采纳" : "已编辑确认"}</span>}
+              </div>
+            </article>)}
+            <button className="button text" type="button" onClick={() => void triggerAIReview()}>重新运行 AI 复核</button>
+          </div> : null}
+          {!aiBusy && !aiReview && aiStatus?.enabled && aiStatus.configured ? <button className="button" type="button" onClick={() => void triggerAIReview()}>运行 AI 现场复核</button> : null}
+          <p className="ai-boundary">AI 只提供可见变化提示；不估算毫米、不判断风险，所有条目由监测员决定是否写入记录。</p>
+        </section>
+      </div>
+
+      <section className="three-image-evidence" aria-label="AI 三图输入与几何证据">
+        {caseBase ? <LoadedEvidence src={`${caseBase}/context.jpg`} alt="AI 输入的现场全景" label="图1 · 本次现场全景" onOpen={setPreviewImage} /> : null}
+        <LoadedEvidence src={caseBase ? `${caseBase}/previous_close.jpg` : result.previous_evidence?.original} alt="AI 输入的上次裂缝近景" label="图2 · 上次裂缝近景" onOpen={setPreviewImage} />
+        <LoadedEvidence src={result.evidence.original} alt="AI 输入的本次裂缝近景" label="图3 · 本次裂缝近景" onOpen={setPreviewImage} />
       </section>
 
-      <section className="wall-comparison" aria-label="上次和本次墙体对比">
-        <LoadedEvidence src={result.previous_evidence?.original ?? result.previous_evidence?.rectified} alt="上次墙体照片" label="上次墙体" onOpen={setPreviewImage} />
-        <div className="comparison-arrow" aria-hidden="true">→</div>
-        <LoadedEvidence src={result.evidence.original} alt="本次墙体照片" label="本次墙体" onOpen={setPreviewImage} />
-      </section>
+      <details className="technical-details"><summary>查看几何技术证据</summary><div className="technical-grid"><dl>
+        <div><dt>Marker IDs</dt><dd>{(metrics.marker_ids ?? result.marker_ids ?? []).join(", ")}</dd></div><div><dt>测量模式</dt><dd>{result.measurement_mode}</dd></div><div><dt>检测器</dt><dd>{result.detector_type}</dd></div><div><dt>Homography RMSE</dt><dd>{metrics.homography_rmse_mm == null ? "—" : `${metrics.homography_rmse_mm.toFixed(3)} mm`}</dd></div><div><dt>质量分</dt><dd>{Math.round(result.quality_score * 100)} / 100</dd></div><div><dt>处理时间</dt><dd>{metrics.processing_ms == null ? "—" : `${metrics.processing_ms.toFixed(0)} ms`}</dd></div>
+      </dl><div className="technical-images"><LoadedEvidence src={result.evidence.overlay} alt="视觉标志检测叠加图" label="检测叠加" onOpen={setPreviewImage} /><LoadedEvidence src={result.evidence.rectified} alt="墙面正视校正图" label="正视校正" onOpen={setPreviewImage} /></div></div>{result.quality_reasons.map((reason) => <p className="warning-line" key={reason}>! {reason}</p>)}</details>
 
-      <section className="plain-checks" aria-label="自动处理结果">
-        <p><span>✓</span>点位与裂缝识别</p>
-        <p><span>✓</span>拍摄角度已校正</p>
-        <p><span>✓</span>与上次观测已对齐</p>
-        <p><span>✓</span>图片质量通过</p>
-      </section>
-
-      {currentWidth != null ? <section className="controlled-width-note"><div><span>首次人工建档开度</span><strong>{result.baseline_crack_width_mm?.toFixed(1)} mm</strong></div><div><span>换算复测开度</span><strong>{currentWidth.toFixed(1)} mm</strong></div><p>基准开度由首次人工建档；当前为受控演示数据。</p></section> : null}
-
-      <details className="technical-details">
-        <summary>查看技术详情</summary>
-        <div className="technical-grid">
-          <dl>
-            <div><dt>Marker IDs</dt><dd>{(metrics.marker_ids ?? result.marker_ids ?? []).join(", ")}</dd></div>
-            <div><dt>测量模式</dt><dd>{result.measurement_mode}</dd></div>
-            <div><dt>检测器</dt><dd>{result.detector_type}</dd></div>
-            <div><dt>Homography RMSE</dt><dd>{metrics.homography_rmse_mm == null ? "—" : `${metrics.homography_rmse_mm.toFixed(3)} mm`}</dd></div>
-            <div><dt>PnP RMSE</dt><dd>{metrics.reprojection_rmse_px == null ? "—" : `${metrics.reprojection_rmse_px.toFixed(3)} px`}</dd></div>
-            <div><dt>质量分</dt><dd>{Math.round(result.quality_score * 100)} / 100</dd></div>
-            <div><dt>板中心距（诊断）</dt><dd>{metrics.legacy_board_center_distance_mm == null ? "—" : `${metrics.legacy_board_center_distance_mm.toFixed(2)} mm`}</dd></div>
-            <div><dt>相机配置</dt><dd>{result.camera_profile?.is_demo_profile ? "演示配置" : "已标定配置"}</dd></div>
-            <div><dt>处理时间</dt><dd>{metrics.processing_ms == null ? "—" : `${metrics.processing_ms.toFixed(0)} ms`}</dd></div>
-          </dl>
-          <div className="technical-images">
-            <LoadedEvidence src={result.evidence.overlay} alt="视觉复测贴检测叠加图" label="检测叠加" onOpen={setPreviewImage} />
-            <LoadedEvidence src={result.evidence.rectified} alt="墙体正视校正图" label="墙面正视校正" onOpen={setPreviewImage} />
-          </div>
-        </div>
-        {result.quality_reasons.map((reason) => <p className="warning-line" key={reason}>! {reason}</p>)}
-      </details>
-
-      {accepted ? <div className="confirm-strip"><label>记录人<input value={observer} onChange={(event) => setObserver(event.target.value)} /></label><label>备注（可选）<input value={remark} onChange={(event) => setRemark(event.target.value)} /></label><button className="button primary large" type="button" disabled={busy || !observer.trim()} onClick={() => void confirm()}>{busy ? "正在生成记录…" : "确认并生成记录"}</button><button className="button" type="button" onClick={() => navigate("/capture")}>重新复测</button></div> : <button className="button primary large" type="button" onClick={() => navigate("/capture")}>重新复测</button>}
+      {accepted ? <div className="confirm-strip"><label>记录人<input value={observer} onChange={(event) => setObserver(event.target.value)} /></label><label>备注（可选）<input value={remark} onChange={(event) => setRemark(event.target.value)} /></label><p>{aiBusy ? "AI 复核仍在运行，完成或失败后即可生成记录。" : pendingCount > 0 ? `还有 ${pendingCount} 条 AI 提示未处理；未处理项不会写入记录。` : "正式记录只包含几何结果与人工采纳项。"}</p><button className="button primary large" type="button" disabled={busy || aiBusy || !observer.trim()} onClick={() => void confirm()}>{busy ? "正在生成记录…" : "确认并生成记录"}</button></div> : <button className="button primary large" type="button" onClick={() => navigate("/capture?demo=1&case=case_05_quality_fail")}>重新拍摄</button>}
       {error ? <div className="notice error" role="alert">{error}</div> : null}
-      <p className="provenance-note">真实工作故事来自贵州公开报道；墙体图像来自 {result.data_provenance.wall_dataset}（{result.data_provenance.license}）；位移为受控仿真。</p>
 
-      {previewImage ? <div className="image-modal" role="dialog" aria-modal="true" aria-label="影像证据放大查看" onClick={() => setPreviewImage(null)}><button type="button" onClick={() => setPreviewImage(null)} aria-label="关闭大图">关闭</button><img src={previewImage.src} alt={previewImage.alt} onClick={(event) => event.stopPropagation()} /></div> : null}
+      {previewImage ? <div className="image-modal" role="dialog" aria-modal="true" aria-label="影像证据放大查看" onClick={() => setPreviewImage(null)}><button type="button" onClick={() => setPreviewImage(null)}>关闭</button><img src={previewImage.src} alt={previewImage.alt} onClick={(event) => event.stopPropagation()} /></div> : null}
     </section>
   );
 }

@@ -1,0 +1,161 @@
+{
+  "case_id": "case_01_stable",
+  "title": "墙体裂缝稳定复测",
+  "worker_story": "贵州仁怀基层监测员公开工作流的本地 Demo 复原",
+  "context_source": {
+    "scene_id": "v04_scene_04",
+    "dataset": "Wall Crack Image Dataset for Earthquake and Structural Health Analysis",
+    "source_url": "https://data.mendeley.com/datasets/hxrry6krs7/1",
+    "doi": "10.17632/hxrry6krs7.1",
+    "license": "CC BY 4.0",
+    "source_filename": "RA_CRACK_IMG 32.jpg",
+    "source_file_id": "5cf4a457-9502-447e-ad00-573a2e9e4962",
+    "source_sha256": "c2b61e0be684c450a0c95482fe1ea3e0b1eefa25ebe63413ac4a897a16f263fb",
+    "curated_file": "data/curated_scene_library/scene_04.jpg",
+    "transforms": [
+      "resize_cover_1440x960",
+      "jpeg_quality_91"
+    ],
+    "is_real_guizhou_monitoring_data": false
+  },
+  "close_source": {
+    "scene_id": "wall_scene_001",
+    "dataset": "Özgenel Concrete Crack Segmentation Dataset",
+    "source_file": "data/datasets/ozgenel/rgb/328.jpg",
+    "mask_file": "data/datasets/ozgenel/BW/328.jpg",
+    "source_url": "https://data.mendeley.com/datasets/jwsn7tfbrp/1",
+    "doi": "10.17632/jwsn7tfbrp.1",
+    "license": "CC BY 4.0",
+    "usage": "controlled synthetic hackathon demo",
+    "is_real_guizhou_monitoring_data": false,
+    "is_golden_path": true,
+    "selection_score": 5.37417
+  },
+  "synthetic_changes": [
+    "opening_delta_0.3mm"
+  ],
+  "expected_geometry": {
+    "opening_delta_mm": 0.3,
+    "gate": "accepted",
+    "measurement_source": "deterministic_geometry"
+  },
+  "expected_ai_observations": [
+    "none"
+  ],
+  "context_callouts": [
+    {
+      "id": "01",
+      "label": "裂缝复测点",
+      "x": 0.34,
+      "y": 0.51
+    },
+    {
+      "id": "02",
+      "label": "墙面 / 挡墙观察区域",
+      "x": 0.62,
+      "y": 0.36
+    },
+    {
+      "id": "03",
+      "label": "排水 / 渗水观察区域",
+      "x": 0.72,
+      "y": 0.76
+    }
+  ],
+  "previous_truth": {
+    "name": "case_01_stable_previous",
+    "opening_delta_mm": 0.0,
+    "shear_delta_mm": 0.0,
+    "ground_truth_mm": 160.0,
+    "legacy_ground_truth_board_distance_mm": 160.0,
+    "yaw_deg": 0.0,
+    "pitch_deg": 0.0,
+    "brightness": 1.0,
+    "blur_sigma": 0.0,
+    "occlusion": "none",
+    "expected_gate": "accepted",
+    "camera_homography": [
+      [
+        0.8337502300649836,
+        -1.3388109326932937e-17,
+        126.66666412353516
+      ],
+      [
+        1.421796369705053e-19,
+        0.8340283569641367,
+        40.0
+      ],
+      [
+        3.554490924262632e-21,
+        -1.0667029755626228e-19,
+        1.0
+      ]
+    ],
+    "background_source": "data/datasets/ozgenel/rgb/328.jpg",
+    "canonical_size_px": [
+      2000,
+      1200
+    ],
+    "synthetic_scale_px_per_mm": 2.0,
+    "baseline_crack_width_mm": 8.0,
+    "baseline_right_center_mm": [
+      160.0,
+      0.0
+    ],
+    "current_right_center_mm": [
+      160.0,
+      0.0
+    ],
+    "coherent_plane": true,
+    "surface_change": "none"
+  },
+  "current_truth": {
+    "name": "case_01_stable_current",
+    "opening_delta_mm": 0.3,
+    "shear_delta_mm": 0.0,
+    "ground_truth_mm": 160.3,
+    "legacy_ground_truth_board_distance_mm": 160.3,
+    "yaw_deg": 0.0,
+    "pitch_deg": 0.0,
+    "brightness": 1.0,
+    "blur_sigma": 0.0,
+    "occlusion": "none",
+    "expected_gate": "accepted",
+    "camera_homography": [
+      [
+        0.8337502300649836,
+        -1.3388109326932937e-17,
+        126.66666412353516
+      ],
+      [
+        1.421796369705053e-19,
+        0.8340283569641367,
+        40.0
+      ],
+      [
+        3.554490924262632e-21,
+        -1.0667029755626228e-19,
+        1.0
+      ]
+    ],
+    "background_source": "data/datasets/ozgenel/rgb/328.jpg",
+    "canonical_size_px": [
+      2000,
+      1200
+    ],
+    "synthetic_scale_px_per_mm": 2.0,
+    "baseline_crack_width_mm": 8.0,
+    "baseline_right_center_mm": [
+      160.0,
+      0.0
+    ],
+    "current_right_center_mm": [
+      160.3,
+      0.0
+    ],
+    "coherent_plane": true,
+    "surface_change": "none"
+  },
+  "is_real_guizhou_data": false,
+  "disclosure": "公开墙体图片与明确受控变化构成的比赛演示，不是真实事故或贵州现场记录。"
+}

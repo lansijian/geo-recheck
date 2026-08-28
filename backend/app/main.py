@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 import cv2
 import numpy as np
 
-from app.config import BENCHMARK_ROOT, CAMERA_PROFILE_PATH, EVIDENCE_ROOT, PROJECT_ROOT
+from app.config import BENCHMARK_ROOT, CAMERA_PROFILE_PATH, DEMO_CASES_ROOT, EVIDENCE_ROOT, PROJECT_ROOT
 from app.cv.calibration import calibrate_camera
 from app.db.session import Base, SessionLocal, engine, get_db, migrate_schema
 from app.models import BenchmarkTrial, Inspection, MonitorPoint
@@ -26,7 +26,15 @@ from app.services.inspection import (
     inspection_to_dict,
     seed_baseline,
 )
+from app.services.ai_review import (
+    ai_review_to_dict,
+    build_confirmed_record_text,
+    decide_ai_review_item,
+    latest_ai_review,
+    run_and_persist_ai_review,
+)
 from app.services.registry import point_to_dict, seed_points
+from app.services.stepfun_observer import ai_status
 
 
 logger = logging.getLogger("uvicorn.error")
@@ -45,8 +53,8 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="地灾复测 API",
-    version="0.3.0",
-    description="贵州基层墙体裂缝相对复测与自动留痕电脑 Demo。不是预测、预警或业务管理平台。",
+    version="0.4.0",
+    description="几何算法负责量，阶跃多模态负责看，监测员负责确认。不是风险预测或自动预警平台。",
     lifespan=lifespan,
 )
 app.add_middleware(
@@ -62,6 +70,16 @@ app.mount(
     "/demo-assets",
     StaticFiles(directory=BENCHMARK_ROOT / "images", check_dir=False),
     name="demo-assets",
+)
+app.mount(
+    "/demo-cases",
+    StaticFiles(directory=DEMO_CASES_ROOT, check_dir=False),
+    name="demo-cases",
+)
+app.mount(
+    "/scene-library",
+    StaticFiles(directory=PROJECT_ROOT / "data" / "curated_scene_library", check_dir=False),
+    name="scene-library",
 )
 app.mount(
     "/wall-assets",
@@ -88,9 +106,51 @@ class BenchmarkTrialPayload(BaseModel):
     errors: int = Field(default=0, ge=0)
 
 
+class AIReviewPayload(BaseModel):
+    case_id: str = Field(pattern=r"^case_[a-z0-9_]+$", max_length=64)
+
+
+class AIReviewDecisionPayload(BaseModel):
+    decision: str = Field(pattern=r"^(accepted|rejected|edited)$")
+    edited_evidence: str | None = Field(default=None, max_length=500)
+
+
 @app.get("/api/health")
 def health() -> dict:
-    return {"status": "ok", "service": "geo-recheck", "version": "0.3.0"}
+    return {"status": "ok", "service": "geo-recheck", "version": "0.4.0"}
+
+
+@app.get("/api/ai/status")
+def get_ai_status() -> dict:
+    return ai_status()
+
+
+@app.get("/api/demo-cases")
+def list_demo_cases() -> list[dict]:
+    cases: list[dict] = []
+    if not DEMO_CASES_ROOT.exists():
+        return cases
+    for case_dir in sorted(DEMO_CASES_ROOT.glob("case_*")):
+        metadata_path = case_dir / "metadata.json"
+        if not metadata_path.exists():
+            continue
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+        cases.append(
+            {
+                "case_id": metadata["case_id"],
+                "title": metadata["title"],
+                "expected_geometry": metadata["expected_geometry"],
+                "expected_ai_observations": metadata["expected_ai_observations"],
+                "context_callouts": metadata["context_callouts"],
+                "disclosure": metadata["disclosure"],
+                "assets": {
+                    "context": f"/demo-cases/{case_dir.name}/context.jpg",
+                    "previous_close": f"/demo-cases/{case_dir.name}/previous_close.jpg",
+                    "current_close": f"/demo-cases/{case_dir.name}/current_close.jpg",
+                },
+            }
+        )
+    return cases
 
 
 @app.get("/api/calibration/profile")
@@ -164,6 +224,7 @@ async def measure(
     browser_lat: float | None = Form(default=None),
     browser_lon: float | None = Form(default=None),
     camera_profile: str | None = Form(default=None),
+    demo_case_id: str | None = Form(default=None),
     session: Session = Depends(get_db),
 ) -> dict:
     if image.content_type and not image.content_type.startswith("image/"):
@@ -179,6 +240,7 @@ async def measure(
             browser_lat,
             browser_lon,
             original_filename=image.filename or "unnamed",
+            demo_case_id=demo_case_id,
         )
     except ValueError as error:
         raise HTTPException(422, str(error)) from error
@@ -201,10 +263,16 @@ def confirm_inspection(
     inspection.measurement_status = "confirmed"
     inspection.observer_name = payload.observer_name
     inspection.remark = payload.remark or inspection.remark
-    inspection.visible_change_note = payload.visible_change_note
+    inspection.visible_change_note = build_confirmed_record_text(session, inspection)
+    if payload.visible_change_note:
+        inspection.visible_change_note += f"人工补充：{payload.visible_change_note}"
     session.commit()
     point = session.get(MonitorPoint, inspection.monitor_point_id)
-    return inspection_to_dict(inspection, point)
+    response = inspection_to_dict(inspection, point)
+    review = latest_ai_review(session, inspection.id)
+    response["ai_review"] = ai_review_to_dict(session, review) if review else None
+    response["record_text"] = inspection.visible_change_note
+    return response
 
 
 @app.get("/api/inspections/{inspection_id}")
@@ -232,7 +300,62 @@ def get_inspection(inspection_id: str, session: Session = Depends(get_db)) -> di
         if previous
         else None
     )
+    review = latest_ai_review(session, inspection.id)
+    payload["ai_review"] = ai_review_to_dict(session, review) if review else None
+    payload["record_text"] = (
+        inspection.visible_change_note
+        if inspection.human_confirmed and inspection.visible_change_note
+        else build_confirmed_record_text(session, inspection)
+    )
     return payload
+
+
+@app.post("/api/inspections/{inspection_id}/ai-review")
+def run_ai_review(
+    inspection_id: str,
+    payload: AIReviewPayload,
+    session: Session = Depends(get_db),
+) -> dict:
+    inspection = session.get(Inspection, inspection_id)
+    if inspection is None:
+        raise HTTPException(404, "复测记录不存在。")
+    try:
+        return run_and_persist_ai_review(session, inspection, payload.case_id)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+
+
+@app.post("/api/inspections/{inspection_id}/ai-review/items/{item_id}/decision")
+def decide_ai_item(
+    inspection_id: str,
+    item_id: int,
+    payload: AIReviewDecisionPayload,
+    session: Session = Depends(get_db),
+) -> dict:
+    try:
+        return decide_ai_review_item(
+            session,
+            inspection_id,
+            item_id,
+            payload.decision,
+            payload.edited_evidence,
+        )
+    except LookupError as error:
+        raise HTTPException(404, str(error)) from error
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+
+
+@app.get("/api/inspections/{inspection_id}/record-draft")
+def inspection_record_draft(inspection_id: str, session: Session = Depends(get_db)) -> dict:
+    inspection = session.get(Inspection, inspection_id)
+    if inspection is None:
+        raise HTTPException(404, "复测记录不存在。")
+    return {
+        "inspection_id": inspection.id,
+        "record_text": build_confirmed_record_text(session, inspection),
+        "human_confirmation_required": True,
+    }
 
 
 @app.get("/api/points/{monitor_point_id}/history")

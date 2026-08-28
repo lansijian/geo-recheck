@@ -1,0 +1,162 @@
+{
+  "case_id": "case_04_spalling",
+  "title": "小位移 + 局部表面剥落",
+  "worker_story": "贵州仁怀基层监测员公开工作流的本地 Demo 复原",
+  "context_source": {
+    "scene_id": "v04_scene_03",
+    "dataset": "Wall Crack Image Dataset for Earthquake and Structural Health Analysis",
+    "source_url": "https://data.mendeley.com/datasets/hxrry6krs7/1",
+    "doi": "10.17632/hxrry6krs7.1",
+    "license": "CC BY 4.0",
+    "source_filename": "RA_CRACK_IMG (131).jpg",
+    "source_file_id": "c64f043c-4cf1-43d3-9dc5-bd14e21dbeba",
+    "source_sha256": "399c938b123cf6ad24b14373389f5be4c9d6893f42d7b3091f417756b58bdc60",
+    "curated_file": "data/curated_scene_library/scene_03.jpg",
+    "transforms": [
+      "resize_cover_1440x960",
+      "jpeg_quality_91"
+    ],
+    "is_real_guizhou_monitoring_data": false
+  },
+  "close_source": {
+    "scene_id": "wall_scene_003",
+    "dataset": "Özgenel Concrete Crack Segmentation Dataset",
+    "source_file": "data/datasets/ozgenel/rgb/417.JPG",
+    "mask_file": "data/datasets/ozgenel/BW/417.jpg",
+    "source_url": "https://data.mendeley.com/datasets/jwsn7tfbrp/1",
+    "doi": "10.17632/jwsn7tfbrp.1",
+    "license": "CC BY 4.0",
+    "usage": "controlled synthetic hackathon demo",
+    "is_real_guizhou_monitoring_data": false,
+    "is_golden_path": false,
+    "selection_score": 5.27666
+  },
+  "synthetic_changes": [
+    "opening_delta_1.2mm",
+    "controlled_spalling"
+  ],
+  "expected_geometry": {
+    "opening_delta_mm": 1.2,
+    "gate": "accepted",
+    "measurement_source": "deterministic_geometry"
+  },
+  "expected_ai_observations": [
+    "spalling_or_peeling"
+  ],
+  "context_callouts": [
+    {
+      "id": "01",
+      "label": "裂缝复测点",
+      "x": 0.34,
+      "y": 0.51
+    },
+    {
+      "id": "02",
+      "label": "墙面 / 挡墙观察区域",
+      "x": 0.62,
+      "y": 0.36
+    },
+    {
+      "id": "03",
+      "label": "排水 / 渗水观察区域",
+      "x": 0.72,
+      "y": 0.76
+    }
+  ],
+  "previous_truth": {
+    "name": "case_04_spalling_previous",
+    "opening_delta_mm": 0.0,
+    "shear_delta_mm": 0.0,
+    "ground_truth_mm": 160.0,
+    "legacy_ground_truth_board_distance_mm": 160.0,
+    "yaw_deg": 0.0,
+    "pitch_deg": 0.0,
+    "brightness": 1.0,
+    "blur_sigma": 0.0,
+    "occlusion": "none",
+    "expected_gate": "accepted",
+    "camera_homography": [
+      [
+        0.8337502300649836,
+        -1.3388109326932937e-17,
+        126.66666412353516
+      ],
+      [
+        1.421796369705053e-19,
+        0.8340283569641367,
+        40.0
+      ],
+      [
+        3.554490924262632e-21,
+        -1.0667029755626228e-19,
+        1.0
+      ]
+    ],
+    "background_source": "data/datasets/ozgenel/rgb/417.JPG",
+    "canonical_size_px": [
+      2000,
+      1200
+    ],
+    "synthetic_scale_px_per_mm": 2.0,
+    "baseline_crack_width_mm": 8.0,
+    "baseline_right_center_mm": [
+      160.0,
+      0.0
+    ],
+    "current_right_center_mm": [
+      160.0,
+      0.0
+    ],
+    "coherent_plane": true,
+    "surface_change": "none"
+  },
+  "current_truth": {
+    "name": "case_04_spalling_current",
+    "opening_delta_mm": 1.2,
+    "shear_delta_mm": 0.0,
+    "ground_truth_mm": 161.2,
+    "legacy_ground_truth_board_distance_mm": 161.2,
+    "yaw_deg": 0.0,
+    "pitch_deg": 0.0,
+    "brightness": 1.0,
+    "blur_sigma": 0.0,
+    "occlusion": "none",
+    "expected_gate": "accepted",
+    "camera_homography": [
+      [
+        0.8337502300649836,
+        -1.3388109326932937e-17,
+        126.66666412353516
+      ],
+      [
+        1.421796369705053e-19,
+        0.8340283569641367,
+        40.0
+      ],
+      [
+        3.554490924262632e-21,
+        -1.0667029755626228e-19,
+        1.0
+      ]
+    ],
+    "background_source": "data/datasets/ozgenel/rgb/417.JPG",
+    "canonical_size_px": [
+      2000,
+      1200
+    ],
+    "synthetic_scale_px_per_mm": 2.0,
+    "baseline_crack_width_mm": 8.0,
+    "baseline_right_center_mm": [
+      160.0,
+      0.0
+    ],
+    "current_right_center_mm": [
+      161.2,
+      0.0
+    ],
+    "coherent_plane": true,
+    "surface_change": "controlled_spalling"
+  },
+  "is_real_guizhou_data": false,
+  "disclosure": "公开墙体图片与明确受控变化构成的比赛演示，不是真实事故或贵州现场记录。"
+}

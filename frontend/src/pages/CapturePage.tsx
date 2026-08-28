@@ -1,19 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { measureImage } from "../api/client";
+import { getDemoCases, measureImage } from "../api/client";
+import type { DemoCase } from "../types";
 
 type FileDetails = { name: string; width: number; height: number; size: number; type: string };
 
-const PROCESSING_STEPS = [
-  "识别裂缝编号",
-  "自动修正拍摄角度",
-  "与上次观测对齐",
-  "计算相对张开",
-  "自动生成记录字段",
-];
+const PROCESSING_STEPS = ["识别复测标志", "校正拍摄角度", "与历史基准对齐", "计算相对张开", "保存几何证据"];
 const MAX_BYTES = 20 * 1024 * 1024;
 const ACCEPTED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
-const ACCEPTED_EXTENSIONS = /\.(jpe?g|png|webp)$/i;
 
 function formatBytes(value: number): string {
   return value >= 1024 * 1024 ? `${(value / 1024 / 1024).toFixed(1)} MB` : `${Math.round(value / 1024)} KB`;
@@ -30,48 +24,80 @@ function requestLocation(): Promise<{ latitude: number; longitude: number } | un
 
 export default function CapturePage() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const isDemo = searchParams.get("demo") === "1";
-  const [file, setFile] = useState<Blob | null>(null);
+  const requestedCase = searchParams.get("case") ?? "case_03_seepage";
+  const [cases, setCases] = useState<DemoCase[]>([]);
+  const [selectedCaseId, setSelectedCaseId] = useState(requestedCase);
+  const [file, setFile] = useState<File | null>(null);
   const [details, setDetails] = useState<FileDetails | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [processingStep, setProcessingStep] = useState(-1);
-  const [stage, setStage] = useState("等待墙体照片");
+  const [stage, setStage] = useState("选择现场案例");
   const [error, setError] = useState("");
-  const [dragging, setDragging] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const timerRef = useRef<number | null>(null);
-  const demoStartedRef = useRef(false);
+
+  const selectedCase = cases.find((item) => item.case_id === selectedCaseId) ?? null;
+
+  useEffect(() => {
+    let active = true;
+    getDemoCases().then((items) => { if (active) setCases(items); }).catch((reason: unknown) => {
+      if (active) setError(reason instanceof Error ? reason.message : "Demo Cases 加载失败。");
+    });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => () => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
     if (timerRef.current !== null) window.clearInterval(timerRef.current);
   }, []);
 
-  useEffect(() => () => {
-    if (preview) URL.revokeObjectURL(preview);
-  }, [preview]);
+  useEffect(() => () => { if (preview?.startsWith("blob:")) URL.revokeObjectURL(preview); }, [preview]);
 
-  async function prepareFile(blob: Blob, name: string) {
-    const type = blob.type || (name.match(/\.png$/i) ? "image/png" : "image/jpeg");
-    if ((!ACCEPTED_TYPES.has(type) && !ACCEPTED_EXTENSIONS.test(name)) || blob.size > MAX_BYTES) {
-      throw new Error(blob.size > MAX_BYTES ? "图片不能超过 20 MB。" : "仅支持 JPG、JPEG、PNG、WebP 图片。");
+  async function prepareFile(blob: Blob, name: string, previewUrl?: string) {
+    const type = blob.type || "image/jpeg";
+    if (!ACCEPTED_TYPES.has(type) || blob.size > MAX_BYTES) {
+      throw new Error(blob.size > MAX_BYTES ? "图片不能超过 20 MB。" : "仅支持 JPG、PNG、WebP 图片。");
     }
-    const url = URL.createObjectURL(blob);
+    const url = previewUrl ?? URL.createObjectURL(blob);
     const image = new Image();
     const dimensions = await new Promise<{ width: number; height: number }>((resolve, reject) => {
       image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight });
       image.onerror = () => reject(new Error("图片读取失败。"));
       image.src = url;
     });
-    if (preview) URL.revokeObjectURL(preview);
-    setFile(blob instanceof File ? blob : new File([blob], name, { type }));
+    setFile(new File([blob], name, { type }));
     setDetails({ name, size: blob.size, type, ...dimensions });
     setPreview(url);
-    setStage("墙体照片已就绪");
+    setStage("本次近景已就绪");
+  }
+
+  async function loadCase(caseId: string) {
+    const target = cases.find((item) => item.case_id === caseId);
+    if (!target) return;
+    setError("");
+    setStage("正在准备三图现场案例…");
+    const response = await fetch(target.assets.current_close);
+    if (!response.ok) throw new Error("Demo Case 图片不可用，请重新生成 V0.4 数据。 ");
+    await prepareFile(await response.blob(), `${caseId}_current.jpg`, target.assets.current_close);
+  }
+
+  useEffect(() => {
+    if (!isDemo || cases.length === 0 || file) return;
+    void loadCase(selectedCaseId).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "案例加载失败。"));
+  }, [cases, file, isDemo, selectedCaseId]);
+
+  async function chooseCase(caseId: string) {
+    setSelectedCaseId(caseId);
+    setSearchParams({ demo: "1", case: caseId });
+    setFile(null);
+    setDetails(null);
+    setPreview(null);
+    setProcessingStep(-1);
   }
 
   async function handleSelected(selected?: File) {
@@ -84,14 +110,12 @@ export default function CapturePage() {
   async function startCamera() {
     setError("");
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false });
       streamRef.current = stream;
       if (videoRef.current) videoRef.current.srcObject = stream;
       setCameraActive(true);
       setStage("摄像头已启动，请让左右复测贴完整入镜");
-    } catch {
-      setError("无法启用摄像头，请检查浏览器权限或使用上传照片。");
-    }
+    } catch { setError("无法启用摄像头，请检查浏览器权限或使用上传照片。"); }
   }
 
   function captureFrame() {
@@ -101,109 +125,70 @@ export default function CapturePage() {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     canvas.getContext("2d")?.drawImage(video, 0, 0);
-    canvas.toBlob((blob) => {
-      if (blob) void prepareFile(blob, `wall-recheck-${Date.now()}.png`).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "拍摄失败"));
-    }, "image/png");
+    canvas.toBlob((blob) => { if (blob) void prepareFile(blob, `wall-recheck-${Date.now()}.png`); }, "image/png");
   }
 
-  async function submitBlob(blob: Blob) {
+  async function submit() {
+    if (!file) return;
     setBusy(true);
     setError("");
     setProcessingStep(0);
-    setStage("正在识别 CRACK-W01…");
+    setStage("正在完成确定性几何测量…");
+    sessionStorage.setItem("geo-recheck:system-started", String(Date.now()));
     timerRef.current = window.setInterval(() => setProcessingStep((value) => Math.min(4, value + 1)), 230);
     try {
       const location = isDemo ? undefined : await requestLocation();
-      const result = await measureImage(blob, location);
-      if (timerRef.current !== null) window.clearInterval(timerRef.current);
-      timerRef.current = null;
+      const result = await measureImage(file, location, isDemo ? selectedCaseId : undefined);
       setProcessingStep(5);
-      setStage("复测完成，正在打开结果");
-      await new Promise((resolve) => window.setTimeout(resolve, 280));
       navigate(`/result/${result.id}`);
     } catch (reason) {
-      if (timerRef.current !== null) window.clearInterval(timerRef.current);
-      timerRef.current = null;
       setError(reason instanceof Error ? reason.message : "测量失败，请重新拍摄。");
       setStage("处理失败");
       setProcessingStep(-1);
     } finally {
+      if (timerRef.current !== null) window.clearInterval(timerRef.current);
+      timerRef.current = null;
       setBusy(false);
     }
-  }
-
-  async function loadDemoSample(autoSubmit = false) {
-    setError("");
-    setStage("正在加载公开墙面场景复原…");
-    const response = await fetch("/wall-assets/current_open_5mm_yaw20.png");
-    if (!response.ok) throw new Error("墙体演示样本不可用，请先运行 scripts\\generate_wall_recheck_demo.py。");
-    const blob = await response.blob();
-    const named = new File([blob], "current_open_5mm_yaw20.png", { type: "image/png" });
-    await prepareFile(named, named.name);
-    if (autoSubmit) {
-      await new Promise((resolve) => window.setTimeout(resolve, 700));
-      await submitBlob(named);
-    }
-  }
-
-  useEffect(() => {
-    if (!isDemo || demoStartedRef.current) return;
-    demoStartedRef.current = true;
-    void loadDemoSample(true).catch((reason: unknown) => {
-      setError(reason instanceof Error ? reason.message : "一分钟演示启动失败。");
-      setStage("演示失败");
-    });
-  }, [isDemo]);
-
-  function clearFile() {
-    if (preview) URL.revokeObjectURL(preview);
-    setFile(null);
-    setDetails(null);
-    setPreview(null);
-    setStage("等待墙体照片");
-    setProcessingStep(-1);
   }
 
   return (
     <section className="page capture-page wall-capture">
       <div className="page-heading compact">
-        <div><p className="eyebrow">贵州仁怀 · 公开工作场景复原</p><h1>{isDemo ? "一分钟演示：复测这条墙缝" : "拍摄墙体裂缝复测照片"}</h1><p>裂缝编号 CRACK-W01 · 左右视觉复测贴属于同一墙面</p></div>
-        <span className="demo-mode-label">演示模式</span>
+        <div><p className="eyebrow">现场全景 → 裂缝近景</p><h1>{isDemo ? "选择一个现场案例" : "拍摄本次裂缝近景"}</h1><p>Golden Path 默认：墙体裂缝复测 + 疑似新增水迹</p></div>
+        <span className="demo-mode-label">{isDemo ? "V0.4 Demo" : "现场模式"}</span>
       </div>
+
+      {isDemo ? <div className="case-selector" aria-label="五个演示案例">{cases.map((item) => <button type="button" className={item.case_id === selectedCaseId ? "active" : ""} key={item.case_id} onClick={() => void chooseCase(item.case_id)}><span>{item.case_id.replace("case_", "")}</span><strong>{item.title}</strong></button>)}</div> : null}
+
+      {selectedCase ? <section className="case-visuals">
+        <figure className="context-panel"><img src={selectedCase.assets.context} alt="本次巡查现场全景" /><figcaption>现场全景</figcaption>{selectedCase.context_callouts.map((item) => <span className="site-callout compact" key={item.id} style={{ left: `${item.x * 100}%`, top: `${item.y * 100}%` }}><b>{item.id}</b>{item.label}</span>)}</figure>
+        <figure><img src={selectedCase.assets.previous_close} alt="上次裂缝近景" /><figcaption>上次近景</figcaption></figure>
+        <figure><img src={selectedCase.assets.current_close} alt="本次裂缝近景" /><figcaption>本次近景</figcaption></figure>
+      </section> : null}
 
       <div className="capture-primary-actions" aria-label="照片来源">
-        <button className="button large" type="button" onClick={startCamera}>使用摄像头</button>
-        <label className="button primary large upload-primary">上传墙体照片<input data-testid="photo-input" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" onChange={(event) => { const selected = event.target.files?.[0]; event.currentTarget.value = ""; void handleSelected(selected); }} /></label>
+        <button className="button" type="button" onClick={startCamera}>使用摄像头</button>
+        <label className="button upload-primary">上传本次近景<input data-testid="photo-input" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" onChange={(event) => { const selected = event.target.files?.[0]; event.currentTarget.value = ""; void handleSelected(selected); }} /></label>
       </div>
 
-      <div className="capture-layout">
-        <div className={`camera-panel wall-photo-panel drop-zone ${dragging ? "dragging" : ""}`} onDragOver={(event) => { event.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={(event) => { event.preventDefault(); setDragging(false); void handleSelected(event.dataTransfer.files?.[0]); }}>
+      <div className="capture-layout compact-capture">
+        <div className="camera-panel wall-photo-panel">
           {preview ? <img data-testid="upload-preview" src={preview} alt="真实建筑墙面裂缝与左右视觉复测贴" /> : <video ref={videoRef} autoPlay playsInline muted aria-label="摄像头实时画面" />}
-          {!preview && !cameraActive ? <div className="camera-empty"><strong>让墙缝和左右复测贴完整入镜</strong><small>拖拽或上传 JPG、PNG、WebP，最大 20 MB</small></div> : null}
-          {preview ? <span className="sticker-visible-badge" data-testid="recheck-sticker-indicator">左右视觉复测贴可见</span> : null}
-          {busy ? <div className="processing-overlay" role="status"><span className="spinner" /><strong>{stage}</strong><small>确定性几何测量 · 不进行风险预测</small></div> : null}
+          {!preview && !cameraActive ? <div className="camera-empty"><strong>让墙缝和左右复测贴完整入镜</strong><small>JPG、PNG、WebP，最大 20 MB</small></div> : null}
+          {preview ? <span className="sticker-visible-badge" data-testid="recheck-sticker-indicator">待算法核验复测贴</span> : null}
+          {busy ? <div className="processing-overlay" role="status"><span className="spinner" /><strong>{stage}</strong><small>毫米值来自几何算法，不由大模型估算</small></div> : null}
         </div>
-
         <aside className="capture-checks human-steps">
-          <p className="eyebrow">系统正在替他完成</p>
-          <ol>
-            {PROCESSING_STEPS.map((label, index) => (
-              <li key={label} className={processingStep > index ? "done" : processingStep === index ? "active" : "pending"}>
-                <span>{processingStep > index ? "✓" : `0${index + 1}`}</span><strong>{label}</strong>
-              </li>
-            ))}
-          </ol>
-          {details ? <dl className="file-details" data-testid="file-details"><div><dt>照片</dt><dd>{details.name}</dd></div><div><dt>分辨率</dt><dd>{details.width} × {details.height}</dd></div><div><dt>大小</dt><dd>{formatBytes(details.size)}</dd></div></dl> : <div className="inline-empty">等待墙体照片</div>}
-          <div className="capture-actions">
-            {cameraActive && !preview ? <button className="button" type="button" onClick={captureFrame}>拍摄当前画面</button> : null}
-            {!isDemo ? <button className="button text" type="button" disabled={busy} onClick={() => void loadDemoSample(false).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "样本加载失败"))}>加载受控墙体样本</button> : null}
-            {preview ? <button className="button text" type="button" disabled={busy} onClick={clearFile}>清除并重拍</button> : null}
-          </div>
+          <p className="eyebrow">几何复测</p>
+          <ol>{PROCESSING_STEPS.map((label, index) => <li key={label} className={processingStep > index ? "done" : processingStep === index ? "active" : "pending"}><span>{processingStep > index ? "✓" : `0${index + 1}`}</span><strong>{label}</strong></li>)}</ol>
+          {details ? <dl className="file-details" data-testid="file-details"><div><dt>照片</dt><dd>{details.name}</dd></div><div><dt>分辨率</dt><dd>{details.width} × {details.height}</dd></div><div><dt>大小</dt><dd>{formatBytes(details.size)}</dd></div></dl> : null}
+          {cameraActive && !preview ? <button className="button" type="button" onClick={captureFrame}>拍摄当前画面</button> : null}
         </aside>
       </div>
       {error ? <div className="notice error" role="alert">{error}</div> : null}
-      <div className="sticky-submit"><p><strong>{stage}</strong><br />质量不合格时不输出可确认的毫米变化。</p><button className="button primary large" type="button" onClick={() => file && void submitBlob(file)} disabled={!file || busy}>{busy ? "正在自动复测…" : "开始复测"}</button></div>
-      <p className="provenance-note">墙体图片来自 Özgenel CC BY 4.0 公开建筑裂缝数据；位移为受控仿真；非真实贵州监测记录。</p>
+      <div className="sticky-submit"><p><strong>{stage}</strong><br />几何结果先返回；AI 复核失败也不会阻塞测量。</p><button className="button primary large" type="button" onClick={() => void submit()} disabled={!file || busy}>{busy ? "正在分析…" : "开始分析"}</button></div>
+      <p className="provenance-note">{selectedCase?.disclosure ?? "上传图片只在本机处理。"}</p>
     </section>
   );
 }

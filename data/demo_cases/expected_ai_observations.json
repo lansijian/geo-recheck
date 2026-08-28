@@ -1,0 +1,17 @@
+{
+  "case_01_stable": [
+    "none"
+  ],
+  "case_02_widening": [
+    "crack_extension"
+  ],
+  "case_03_seepage": [
+    "seepage_or_water_stain"
+  ],
+  "case_04_spalling": [
+    "spalling_or_peeling"
+  ],
+  "case_05_quality_fail": [
+    "coverage_missing"
+  ]
+}

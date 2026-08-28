@@ -1,138 +1,112 @@
-# GeoRecheck · 地灾复测
+# GeoRecheck · 地灾复测 V0.4
 
-> 面向基层地灾巡查的视觉复测与自动留痕 PoC
+> 几何算法负责“量”，阶跃多模态负责“看”，监测员负责“确认”。
 
-A local proof-of-concept for visual crack re-measurement and inspection record generation in grassroots geohazard monitoring.
+GeoRecheck 是一个 Windows 本地 Demo：基层监测员拍摄现场全景与裂缝近景后，系统先用确定性视觉几何计算相对张开，再用 StepFun 多模态模型辅助比较可见水迹、表面剥落、复测标志与图像覆盖，最后由监测员逐条确认并生成巡查记录。
 
-GeoRecheck 聚焦一个具体动作：基层人员在固定墙缝两侧布设低成本视觉复测贴，拍摄照片后自动完成点位识别、拍摄角度修正、多期相对变形测量、质量门控和记录生成，再由人员确认。
+它不预测滑坡，不判断是否安全，不输出风险等级、预警或撤离建议，也不替代人工巡查和专业监测设备。
 
-它不是滑坡预测系统，不进行地灾风险判断，也不替代专业自动化监测设备或基层监测员。
-
-## Demo Preview
-
-![真实场景首页](docs/assets/home.png)
-
-| 相对张开结果 | 人工确认后的自动记录 |
-|---|---|
-| ![相对张开结果](docs/assets/result.png) | ![自动生成的复测记录](docs/assets/record.png) |
-
-## Why
-
-贵州公开报道中的基层地灾监测员需要反复执行：丈量墙体裂缝、比对每日监测数据、填写巡查台账；当地同时已经部署自动化监测设备。因此 GeoRecheck 不再造一个管理平台，而只处理人工巡查中的固定点视觉复测：
-
-**measure → compare → record**
-
-真实岗位依据：[人民网贵州《常态化巡查、智慧化监测！贵州仁怀：筑牢汛期地质灾害安全防线》](https://gz.people.com.cn/n2/2026/0522/c361324-41588761.html)。
-
-## Demo
+## 60 秒主链路
 
 ```text
-Photo
-  → Fiducial Detection
-  → Perspective / Pose Correction
-  → Relative Deformation Measurement
-  → Quality Gate
-  → Human Confirmation
-  → Inspection Record
+现场全景 + 上次近景 + 本次近景
+                 │
+        ┌────────┴────────┐
+        │                 │
+  OpenCV 几何测量      StepFun 多模态复核
+  相对张开 +4.8 mm     可见水迹 / 剥落 / 覆盖
+        │                 │
+        └────────┬────────┘
+                 │
+            监测员确认
+                 │
+             巡查记录
 ```
 
-主界面输出“较上次张开 +X mm”和可选剪切变化。视觉板中心绝对距离、PnP RMSE 等只在折叠技术详情中提供。
+![V0.4 真实工作首页](docs/assets/v04-home.png)
 
-## Current Status
+| 几何结果与 AI 失败隔离 | 人工确认后的记录 |
+|---|---|
+| ![V0.4 结果页](docs/assets/v04-result.png) | ![V0.4 记录页](docs/assets/v04-record.png) |
 
-当前版本：**V0.3 hackathon demo**。
+## V0.4 已实现
 
-已完成：
+- 保留 V0.3 的 React/TypeScript/Vite、FastAPI、AprilTag、metric rectification、相对变形、质量门控、证据、SQLite 与人工确认；
+- 5 个有明确来源和受控变化说明的 Demo Cases：稳定、张开、水迹、剥落、质量失败；
+- 12 张 CC BY 4.0 真实墙体场景，以及 1 张 CC0 建筑立面上下文图；
+- StepFun 三图输入，顺序固定为现场全景、上次近景、本次近景，`detail=high`；
+- JSON 首对象提取、Pydantic 枚举校验、越权措辞拒绝、最多一次格式重试；
+- AI timeout、network、quota、model unavailable 均不会阻塞几何结果；
+- AI 条目状态 `pending / accepted / rejected / edited`，正式记录只写入人工接受或编辑项；
+- 结果刷新后从 SQLite 恢复最新 AI 复核与人工处置状态。
 
-- 本地浏览器 Demo、照片上传与摄像头入口；
-- OpenCV fiducial detection；
-- 墙面 metric rectification 与相对变形测量；
-- 图片质量门控与失败拒绝；
-- 原始图、识别图和正视校正图证据；
-- 人工确认、SQLite 持久化和复测记录；
-- 受控墙面仿真与 Planar / Dual PnP A/B；
-- pytest、Vite build、Playwright 和连续 10 次 Golden Path 回归。
+默认模型通过环境变量配置，本地当前验证使用 `step-3.7-flash`，代码没有硬编码为唯一模型。
 
-尚未完成：
+## 本地运行
 
-- 实体复测贴尺寸与贴装验证；
-- 真实相机标定后的 0/2/5/10 mm 物理位移实验；
-- 室外光照、距离、角度与长期贴装测试；
-- 真实基层监测员 shadow mode。
-
-## Validation
-
-在 58 个预期可接受的受控合成墙面场景上，当前 Golden Path 方法 `planar_rectified_2d` 得到：
-
-- MAE：**0.496 mm**
-- P95：**1.002 mm**
-- Failure rate：**0%**
-
-**These values only represent controlled synthetic experiments and must not be interpreted as field accuracy.**
-
-完整逐案例数据见 [`artifacts/validation_v03/`](artifacts/validation_v03/)，验证边界见 [`docs/VALIDATION.md`](docs/VALIDATION.md)。
-
-## Architecture
-
-- Frontend: React, TypeScript, Vite
-- API: FastAPI
-- Vision: OpenCV fiducials, metric rectification, relative deformation, quality gating
-- Storage: SQLite
-- Regression: pytest, Playwright
-
-毫米结果由确定性几何算法产生。可选 AI 裂缝分割未接入主链路，也不会参与毫米值或风险判断。
-
-## Running locally
-
-Windows 10/11、Python 3.11、Node.js 20+：
+Windows 10/11、Node.js 20+。本工作区 Python 固定使用：
 
 ```bat
-git clone https://github.com/lansijian/geo-recheck.git
-cd geo-recheck
-scripts\setup_windows.cmd
+set GEORECHECK_PYTHON=D:\Anaconda\_envs\PulseWeave\Scripts\python.exe
 scripts\run_dev.cmd
 ```
 
 打开 <http://127.0.0.1:5173>。
 
-`setup_windows.cmd` 默认在仓库内创建 `.venv`，安装依赖，并从官方来源下载约 711 MiB 的墙面裂缝数据以生成受控演示场景。已有 Python 环境可通过 `GEORECHECK_PYTHON` 环境变量指定。
-
-常用验证命令：
+StepFun 仅从被 Git 忽略的 `.env.local` 读取密钥：
 
 ```bat
-.venv\Scripts\python.exe -m pytest -q
+copy .env.example .env.local
+notepad .env.local
+```
+
+```dotenv
+STEPFUN_API_KEY=
+STEPFUN_BASE_URL=https://api.stepfun.com/v1
+STEPFUN_MODEL=step-3.7-flash
+STEPFUN_TIMEOUT_SECONDS=45
+STEPFUN_AI_REVIEW_ENABLED=false
+```
+
+密钥不会通过 `/api/ai/status`、SQLite 或日志返回。没有密钥时几何主链路仍完整可用。
+
+## 验证
+
+```bat
+D:\Anaconda\_envs\PulseWeave\Scripts\python.exe -m pytest -q
+npm run typecheck --prefix frontend
 npm run build --prefix frontend
+set GEORECHECK_PYTHON=D:\Anaconda\_envs\PulseWeave\Scripts\python.exe
 npm run e2e --prefix frontend
 ```
 
-## Data & Attribution
+真实 StepFun 三图 smoke test 只在显式配置密钥后执行：
 
-### Özgenel Concrete Crack Segmentation Dataset
+```bat
+D:\Anaconda\_envs\PulseWeave\Scripts\python.exe scripts\test_stepfun_vision.py
+```
 
-- Source: <https://data.mendeley.com/datasets/jwsn7tfbrp/1>
-- DOI: `10.17632/jwsn7tfbrp.1`
-- License: CC BY 4.0
-- Usage: only used to generate controlled wall-crack demo scenes. The original dataset is not redistributed in this repository.
+脚本会把可审计结果写入 `artifacts/stepfun_v04/live_smoke.json`。配额、网络或模型失败会明确标记为失败，不会用 fixture 冒充真实成功。离线 pytest 使用 `backend/tests/fixtures/stepfun_response.json` 验证解析、Pydantic、人工处置和记录生成。
 
-### CrackForest
+V0.3 的受控几何验证结果仍保留在 `artifacts/validation_v03/`；这些数值只代表合成实验，不代表野外精度。
 
-- Source: <https://github.com/cuilimeng/CrackForest-dataset>
-- Usage: legacy regression experiments only; it is not used by the V0.3 Golden Path.
+## 数据与来源边界
 
-数据边界：
+- `REAL STORY`：人民网贵州公开报道中的基层监测员岗位与工作动作；
+- `OPEN IMAGE`：Mendeley CC BY 4.0 墙体裂缝图像与 Pixnio CC0 建筑立面；
+- `SYNTHETIC`：复测贴、首次开度、张开/剪切、水迹、剥落、模糊与 Demo 毫米结果；
+- `NOT REAL GUIZHOU DATA`：所有案例均不是贵州真实事故或生产监测记录。
 
-- **REAL:** 公开报道中的基层监测员工作流程；
-- **PUBLIC DATA:** 公开建筑/混凝土裂缝图片；
-- **SYNTHETIC:** 复测贴布设、首次开度、张开/剪切位移、相机变换和 Demo 毫米结果。
+详细文件级来源见 [`data/curated_scene_library/manifest.json`](data/curated_scene_library/manifest.json)、各案例 `metadata.json` 和 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)。
 
-任何公开裂缝图片都不应被理解为真实贵州监测数据。更多说明见 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)。
+## 当前未完成的真实世界验证
 
-## Safety & Scope
-
-GeoRecheck does not provide geohazard risk assessment, warning, evacuation decisions or safety guarantees.
-
-所有测量结果必须由受过培训的人员复核。本项目不能替代人工现场巡查、专业裂缝监测设备或现有地灾业务系统。
+- StepFun 账号需要可用配额才能取得 live PASS；
+- 实体复测贴尺寸与贴装验证；
+- 真实相机标定后的 0/2/5/10 mm 物理位移实验；
+- 室外光照、距离、角度与长期贴装测试；
+- 真实基层监测员 shadow mode。
 
 ## License
 
-项目自有源代码使用 [MIT License](LICENSE)。第三方数据、由第三方数据产生的演示媒体以及引用材料不属于 MIT 授权范围，继续适用其各自许可证与署名要求。
+项目自有源代码使用 [MIT License](LICENSE)。第三方图像及其派生演示媒体不属于 MIT 授权范围，继续适用各自许可证与署名要求。

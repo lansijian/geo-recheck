@@ -1,38 +1,24 @@
 const PEOPLE_SOURCE = "https://gz.people.com.cn/n2/2026/0522/c361324-41588761.html";
-const PLATFORM_SOURCE = "https://movement.gzstv.com/rtf-live/314/";
+const CHECKLIST_SOURCE = "https://www.sohu.com/a/694943081_121106902";
+
+const CHECKS = [
+  ["裂", "墙缝", "裂缝宽度、深度与延伸", true],
+  ["水", "挡墙渗水", "开裂、渗水、渗砂泥与错落", true],
+  ["泉", "地下水", "水量、浑浊度、颜色与渗出形态", false],
+  ["木", "树木倾斜", "倾斜度与倾斜方向", false],
+  ["坡", "坡面变化", "水田、果园、菜地与水渠错落", false],
+  ["石", "松散物", "流失、冲刷与淘蚀", false],
+] as const;
 
 export default function ScenarioPage() {
   return (
     <section className="page source-page">
-      <header className="source-hero">
-        <p className="eyebrow">真实场景 · 贵州仁怀</p>
-        <h1>自动监测已经存在，人工现场复测仍然每天发生。</h1>
-        <p>本页只说明公开报道中的岗位、动作与系统边界；演示数据不是仁怀真实监测记录。</p>
-      </header>
-      <div className="scenario-grid">
-        <article>
-          <span className="card-number">01</span>
-          <h2>真实的人</h2>
-          <p>仁怀茅台镇地灾监测员冯邦华，汛期坚持巡查隐患点。</p>
-          <blockquote>“我每天巡查隐患点不低于3次。”</blockquote>
-        </article>
-        <article>
-          <span className="card-number">02</span>
-          <h2>真实动作</h2>
-          <p className="action-chain">丈量墙缝 <b>→</b> 比对每日数据 <b>→</b> 填写巡查台账</p>
-          <p>这是本项目压缩的重复动作，不是虚构的新岗位。</p>
-        </article>
-        <article>
-          <span className="card-number">03</span>
-          <h2>为什么还人工</h2>
-          <p>当地已有自动化监测设备。设备负责连续感知，基层人员仍需进入现场巡查、核查并记录。</p>
-          <p>我们的定位是“人防 + 技防”之间的 measurement layer。</p>
-        </article>
-      </div>
-      <div className="source-links">
-        <a href={PEOPLE_SOURCE} target="_blank" rel="noreferrer">人民网贵州，2026-05-22：查看公开报道</a>
-        <a href={PLATFORM_SOURCE} target="_blank" rel="noreferrer">贵州“地灾智防”公开定位：查看来源</a>
-      </div>
+      <header className="source-hero"><p className="eyebrow">真实巡查范围 · 当前刻意只做一小块</p><h1>基层监测员看的是整个现场，不是一张裂缝裁剪图。</h1><p>贵州公开科普列出多类日常目视监测内容。V0.4 只高亮“墙体裂缝 + 可见墙面变化”，其余明确不在当前产品范围内。</p></header>
+      <section className="field-checklist" aria-label="六类现场巡查内容">
+        {CHECKS.map(([icon, title, description, active]) => <article className={active ? "active" : "future"} key={title}><span aria-hidden="true">{icon}</span><div><h2>{title}</h2><p>{description}</p><small>{active ? "V0.4 当前覆盖" : "当前不做"}</small></div></article>)}
+      </section>
+      <section className="scenario-boundary"><div><p className="eyebrow">真实的人与动作</p><h2>冯邦华每天巡查隐患点 ≥3 次</h2><p>丈量墙体裂缝 → 比对每日监测数据 → 查看现场 → 填写巡查台账。</p></div><div><p className="eyebrow">产品边界</p><h2>辅助复测与目视补漏</h2><p>不预测滑坡，不输出风险等级，不建议撤离，不代替专业人员或既有监测设备。</p></div></section>
+      <div className="source-links"><a href={PEOPLE_SOURCE} target="_blank" rel="noreferrer">人民网贵州：真实监测员工作事实</a><a href={CHECKLIST_SOURCE} target="_blank" rel="noreferrer">来源｜贵州省自然资源厅：日常监测内容</a></div>
     </section>
   );
 }

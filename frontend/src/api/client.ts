@@ -1,4 +1,4 @@
-import type { BenchmarkSummary, Measurement, Point } from "../types";
+import type { AIReview, AIStatus, BenchmarkSummary, DemoCase, Measurement, Point } from "../types";
 
 async function parseResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
@@ -19,6 +19,7 @@ export async function getPoints(): Promise<Point[]> {
 export async function measureImage(
   file: Blob,
   location?: { latitude: number; longitude: number },
+  demoCaseId?: string,
 ): Promise<Measurement> {
   const form = new FormData();
   const filename = file instanceof File ? file.name : "measurement.png";
@@ -28,6 +29,7 @@ export async function measureImage(
     form.append("browser_lon", String(location.longitude));
   }
   form.append("camera_profile", "demo_webcam_profile");
+  if (demoCaseId) form.append("demo_case_id", demoCaseId);
   return parseResponse<Measurement>(
     await fetch("/api/measure", { method: "POST", body: form }),
   );
@@ -37,12 +39,46 @@ export async function confirmMeasurement(
   id: string,
   observerName: string,
   remark: string,
+  visibleChangeNote?: string,
 ): Promise<Measurement> {
   return parseResponse<Measurement>(
     await fetch(`/api/inspections/${id}/confirm`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ observer_name: observerName, remark }),
+      body: JSON.stringify({ observer_name: observerName, remark, visible_change_note: visibleChangeNote }),
+    }),
+  );
+}
+
+export async function getDemoCases(): Promise<DemoCase[]> {
+  return parseResponse<DemoCase[]>(await fetch("/api/demo-cases"));
+}
+
+export async function getAIStatus(): Promise<AIStatus> {
+  return parseResponse<AIStatus>(await fetch("/api/ai/status"));
+}
+
+export async function runAIReview(id: string, caseId: string): Promise<AIReview> {
+  return parseResponse<AIReview>(
+    await fetch(`/api/inspections/${id}/ai-review`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ case_id: caseId }),
+    }),
+  );
+}
+
+export async function decideAIReviewItem(
+  inspectionId: string,
+  itemId: number,
+  decision: "accepted" | "rejected" | "edited",
+  editedEvidence?: string,
+): Promise<AIReview> {
+  return parseResponse<AIReview>(
+    await fetch(`/api/inspections/${inspectionId}/ai-review/items/${itemId}/decision`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ decision, edited_evidence: editedEvidence }),
     }),
   );
 }

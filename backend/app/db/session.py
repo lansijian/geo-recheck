@@ -34,12 +34,16 @@ V03_INSPECTION_COLUMNS = {
     "data_provenance": "TEXT",
 }
 
+V04_INSPECTION_COLUMNS = {
+    "demo_case_id": "VARCHAR(64)",
+}
+
 
 def migrate_schema() -> None:
     """Small additive migration so an existing V0.2 SQLite file remains usable."""
     columns = {column["name"] for column in inspect(engine).get_columns("inspections")}
     with engine.begin() as connection:
-        for name, sql_type in V03_INSPECTION_COLUMNS.items():
+        for name, sql_type in {**V03_INSPECTION_COLUMNS, **V04_INSPECTION_COLUMNS}.items():
             if name not in columns:
                 connection.execute(text(f"ALTER TABLE inspections ADD COLUMN {name} {sql_type}"))
 

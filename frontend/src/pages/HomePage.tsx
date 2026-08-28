@@ -1,57 +1,51 @@
 import { Link } from "react-router-dom";
 
 const PEOPLE_SOURCE = "https://gz.people.com.cn/n2/2026/0522/c361324-41588761.html";
+const CALLOUTS = [
+  { id: "01", label: "裂缝复测点", left: "34%", top: "51%" },
+  { id: "02", label: "墙面 / 挡墙观察", left: "62%", top: "36%" },
+  { id: "03", label: "排水 / 渗水观察", left: "72%", top: "76%" },
+];
 
 export default function HomePage() {
   return (
     <section className="page story-home">
-      <div className="story-hero">
+      <div className="field-hero">
         <div className="story-copy">
-          <p className="eyebrow">真实场景 · 贵州仁怀 · 2026-05-22</p>
-          <h1>每天至少巡查 3 次，<br />他仍要拿尺复测这条墙缝。</h1>
-          <p className="story-lead">仁怀茅台镇地灾监测员冯邦华，现场丈量墙体裂缝、比对每日数据，再填写巡查台账。</p>
-          <blockquote>“我每天巡查隐患点不低于3次。”</blockquote>
+          <p className="eyebrow">贵州仁怀 · 真实基层工作</p>
+          <h1>每天至少巡查 3 次，现场不只要量这一条缝。</h1>
+          <p className="story-lead">监测员冯邦华要丈量墙缝、比对每日数据、看现场变化，再填写巡查台账。</p>
+          <ul className="worker-actions" aria-label="基层监测员现场动作">
+            <li>丈量墙缝</li><li>比数据</li><li>看现场</li><li>填台账</li>
+          </ul>
+          <p className="core-sentence"><b>几何算法负责“量”</b><b>阶跃多模态负责“看”</b><b>监测员负责“确认”</b></p>
           <div className="hero-actions">
-            <Link className="button primary large" to="/capture?demo=1">一分钟演示：复测这条墙缝</Link>
-            <Link className="text-link" to="/scenario">为什么自动设备仍不能替代这一步</Link>
+            <Link className="button primary large" to="/capture?demo=1&case=case_03_seepage">开始 60 秒巡查 Demo</Link>
+            <Link className="text-link" to="/scenario">查看完整巡查清单</Link>
           </div>
-          <p className="source-caption">场景依据：<a href={PEOPLE_SOURCE} target="_blank" rel="noreferrer">人民网贵州 2026-05-22 公开报道</a></p>
+          <p className="source-caption">工作事实：<a href={PEOPLE_SOURCE} target="_blank" rel="noreferrer">人民网贵州 2026-05-22 公开报道</a></p>
         </div>
-        <aside className="field-card" aria-label="真实巡查工作卡">
-          <div className="field-card-head"><span>公开工作场景复原</span><b>仁怀 · 茅台镇</b></div>
-          <div className="monitor-person" aria-hidden="true"><span>冯</span><i /></div>
-          <h2>基层地灾监测员</h2>
-          <p>工具 + 检测记录册<br />进入隐患点现场复测</p>
-          <div className="frequency"><strong>≥ 3</strong><span>次 / 日<br />汛期巡查</span></div>
-          <small>不使用新闻人物肖像，仅引用公开姓名与工作事实</small>
-        </aside>
+        <figure className="site-overview">
+          <img src="/scene-library/site_overview_cc0.jpg" alt="公开 CC0 数据中的完整建筑立面现场图" />
+          {CALLOUTS.map((item) => <span className="site-callout" key={item.id} style={{ left: item.left, top: item.top }}><b>{item.id}</b>{item.label}</span>)}
+          <figcaption>建筑立面现场上下文 · Pixnio CC0</figcaption>
+        </figure>
       </div>
 
-      <section className="workflow-section">
-        <div>
-          <p className="eyebrow">现在的真实动作</p>
-          <h2>量一次、比一次、记一次</h2>
-        </div>
-        <ol className="manual-flow">
-          <li><span>01</span><strong>拿尺量</strong></li>
-          <li><span>02</span><strong>翻历史</strong></li>
-          <li><span>03</span><strong>计算变化</strong></li>
-          <li><span>04</span><strong>拍照留痕</strong></li>
-          <li><span>05</span><strong>填写记录</strong></li>
-        </ol>
+      <section className="field-reality">
+        <div><p className="eyebrow">一个小而真实的辅助动作</p><h2>从“全景”走到“近景”，再回到人工记录。</h2></div>
+        <p>一线监测不是只量这一条缝，他还要看现场有没有新的可见变化。V0.4 只覆盖墙体裂缝与可见墙面变化，不扩张为风险研判平台。</p>
       </section>
 
-      <section className="human-tech-note">
-        <div><span className="signal-dot" /><strong>当地已经有自动化监测设备</strong></div>
-        <p>自动设备负责连续感知；人工现场复测仍然每天进行。我们不再造一个管理平台，只补“现实墙缝 → 数字变化 → 人工确认 → 既有系统”这一层。</p>
-      </section>
+      <ol className="v04-flow" aria-label="一分钟巡查流程">
+        <li><span>01</span><strong>现场全景</strong><small>定位观察区域</small></li>
+        <li><span>02</span><strong>上次 vs 本次</strong><small>近景几何复测</small></li>
+        <li><span>03</span><strong>AI 现场复核</strong><small>补充可见变化</small></li>
+        <li><span>04</span><strong>人工确认</strong><small>接受、编辑或删除</small></li>
+        <li><span>05</span><strong>巡查记录</strong><small>只写入确认项</small></li>
+      </ol>
 
-      <section className="promise-strip">
-        <p>不是预测山什么时候塌。</p>
-        <strong>只是把量一次、比一次、记一次，变成拍一次、确认一次。</strong>
-      </section>
-
-      <p className="provenance-note">演示墙面来自 CC BY 4.0 公开建筑裂缝数据；位移为受控仿真；根据公开工作场景复原，非真实监测记录。</p>
+      <p className="provenance-note">真实工作故事来自公开报道；首屏建筑立面图来自 Pixnio CC0，案例图来自 CC BY 4.0 开放数据；裂缝位移与水迹为受控场景仿真，非真实贵州事故或监测记录。</p>
     </section>
   );
 }

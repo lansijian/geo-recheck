@@ -60,6 +60,41 @@ class Inspection(Base):
     quality_reasons: Mapped[str | None] = mapped_column(Text, nullable=True)
     visible_change_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     remark: Mapped[str | None] = mapped_column(Text, nullable=True)
+    demo_case_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+
+
+class AIReview(Base):
+    __tablename__ = "ai_reviews"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    inspection_id: Mapped[str] = mapped_column(String(36), index=True)
+    provider: Mapped[str] = mapped_column(String(30), default="stepfun")
+    model: Mapped[str] = mapped_column(String(100))
+    status: Mapped[str] = mapped_column(String(30), index=True)
+    parsed_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    error_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class AIReviewItem(Base):
+    __tablename__ = "ai_review_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    review_id: Mapped[str] = mapped_column(String(36), index=True)
+    inspection_id: Mapped[str] = mapped_column(String(36), index=True)
+    item_index: Mapped[int] = mapped_column(Integer)
+    observation_type: Mapped[str] = mapped_column(String(50))
+    observation_state: Mapped[str] = mapped_column(String(30))
+    evidence: Mapped[str] = mapped_column(Text)
+    confidence: Mapped[str] = mapped_column(String(20))
+    requires_human_check: Mapped[bool] = mapped_column(Boolean, default=True)
+    human_status: Mapped[str] = mapped_column(String(20), default="pending", index=True)
+    edited_evidence: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
 class BenchmarkTrial(Base):

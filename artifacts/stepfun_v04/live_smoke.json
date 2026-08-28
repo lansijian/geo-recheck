@@ -1,0 +1,9 @@
+{
+  "status": "failed",
+  "provider": "stepfun",
+  "model": "step-3.7-flash",
+  "image_count": 3,
+  "latency_ms": 1645,
+  "error_code": "quota",
+  "message": "StepFun 配额暂不可用。 未使用模拟结果代替。"
+}

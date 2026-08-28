@@ -1,0 +1,57 @@
+[
+  {
+    "case_id": "case_01_stable",
+    "expected_gate": "accepted",
+    "actual_gate": "accepted",
+    "expected_opening_delta_mm": 0.3,
+    "measured_opening_delta_mm": 0.458,
+    "absolute_error_mm": 0.158,
+    "quality_score": 0.9238497939307224,
+    "quality_reasons": []
+  },
+  {
+    "case_id": "case_02_widening",
+    "expected_gate": "accepted",
+    "actual_gate": "accepted",
+    "expected_opening_delta_mm": 5.0,
+    "measured_opening_delta_mm": 5.153,
+    "absolute_error_mm": 0.153,
+    "quality_score": 0.9226066861550462,
+    "quality_reasons": []
+  },
+  {
+    "case_id": "case_03_seepage",
+    "expected_gate": "accepted",
+    "actual_gate": "accepted",
+    "expected_opening_delta_mm": 4.8,
+    "measured_opening_delta_mm": 4.783,
+    "absolute_error_mm": 0.017,
+    "quality_score": 0.9338680327630833,
+    "quality_reasons": []
+  },
+  {
+    "case_id": "case_04_spalling",
+    "expected_gate": "accepted",
+    "actual_gate": "accepted",
+    "expected_opening_delta_mm": 1.2,
+    "measured_opening_delta_mm": 1.155,
+    "absolute_error_mm": 0.045,
+    "quality_score": 0.9293511028428719,
+    "quality_reasons": []
+  },
+  {
+    "case_id": "case_05_quality_fail",
+    "expected_gate": "rejected",
+    "actual_gate": "rejected",
+    "expected_opening_delta_mm": 4.8,
+    "measured_opening_delta_mm": null,
+    "absolute_error_mm": null,
+    "quality_score": 0.0010413941936728397,
+    "quality_reasons": [
+      "无法可靠测量：左侧标靶识别不足。",
+      "无法可靠测量：右侧标靶识别不足。",
+      "图像清晰度不足，请重新拍摄。",
+      "拍摄距离过远。"
+    ]
+  }
+]
