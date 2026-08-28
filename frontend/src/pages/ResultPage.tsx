@@ -35,6 +35,7 @@ export default function ResultPage() {
   const [remark, setRemark] = useState("");
   const [busy, setBusy] = useState(false);
   const [aiBusy, setAIBusy] = useState(false);
+  const [decisionBusyId, setDecisionBusyId] = useState<number | null>(null);
   const [aiElapsedSeconds, setAIElapsedSeconds] = useState(0);
   const [loading, setLoading] = useState(Boolean(id));
   const [error, setError] = useState("");
@@ -88,8 +89,16 @@ export default function ResultPage() {
   async function decide(itemId: number, decision: "accepted" | "rejected") {
     if (!result) return;
     setError("");
+    setDecisionBusyId(itemId);
     try { setAIReview(await decideAIReviewItem(result.id, itemId, decision)); }
-    catch (reason) { setError(reason instanceof Error ? reason.message : "人工确认保存失败"); }
+    catch (reason) {
+      const message = reason instanceof Error ? reason.message : "人工确认保存失败";
+      if (message.includes("AI 观察项不存在")) {
+        const refreshed = await getInspection(result.id).catch(() => null);
+        if (refreshed) setAIReview(refreshed.ai_review ?? null);
+        setError("这条 AI 观察已更新，页面已同步最新复核结果，请重新确认。");
+      } else setError(message);
+    } finally { setDecisionBusyId(null); }
   }
 
   async function confirm() {
@@ -133,7 +142,7 @@ export default function ResultPage() {
   return (
     <section className="page result-page human-result">
       <div className="result-heading">
-        <div><p className="eyebrow">定量：OpenCV · 定性：StepFun · 决策：监测员</p><h1>{result.crack_id}</h1><p>公开场景复原与受控变化，非真实监测记录</p></div>
+        <div><p className="eyebrow">定量：OpenCV · 定性：StepFun · 决策：监测员</p><h1>{result.crack_id}</h1><p>{result.data_provenance.mode === "demo" ? "公开场景复原与受控变化，非真实监测记录" : `${result.monitor_point_name} · 现场复测证据`}</p></div>
         <span className={`status-pill ${accepted ? "ok" : "warning"}`}>{accepted ? "几何质量通过 · 等待人工确认" : "几何质量未通过 · 请重新拍摄"}</span>
       </div>
 
@@ -174,13 +183,13 @@ export default function ResultPage() {
             </p>
           ) : null}
           {aiBusy ? <div className="ai-loading"><span className="spinner" /><p>正在比较现场全景、上次近景与本次近景…</p><strong>已等待 {aiElapsedSeconds} 秒</strong><small>{aiElapsedSeconds < 90 ? "真实多模态调用通常需要 30–90 秒，请保持页面开启。" : "服务仍在处理；超过 180 秒会返回明确的超时结果，几何测量不受影响。"}</small></div> : null}
-          {!aiBusy && (!aiStatus?.enabled || !aiStatus.configured) ? <div className="ai-unavailable"><strong>AI 现场复核未启用</strong><p>几何测量结果不受影响。</p></div> : null}
+          {!aiBusy && !aiReview && (!aiStatus?.enabled || !aiStatus.configured) ? <div className="ai-unavailable"><strong>AI 现场复核未启用</strong><p>几何测量结果不受影响。</p></div> : null}
           {!aiBusy && aiReview?.status === "failed" ? <div className="ai-unavailable"><strong>AI 现场复核暂不可用</strong><p>{aiReview.error_message} 几何测量结果不受影响。</p><button className="button" type="button" onClick={() => void triggerAIReview()}>重新运行 AI 复核</button></div> : null}
           {!aiBusy && aiReview?.status === "completed" ? <div className="finding-list">
             {aiReview.items.map((item) => <article className={`finding ${item.human_status}`} key={item.id}>
               <div><span className="finding-mark">{item.type === "none" || item.state === "stable" ? "✓" : "!"}</span><div><h3>{OBSERVATION_LABELS[item.type]}</h3><p>{item.edited_evidence ?? item.evidence}</p><small>置信度：{CONFIDENCE_LABELS[item.confidence]} · 必须人工确认</small></div></div>
               <div className="finding-actions">
-                {item.human_status === "pending" ? <><button type="button" onClick={() => void decide(item.id, "accepted")}>确认</button><button type="button" onClick={() => void decide(item.id, "rejected")}>不采纳</button></> : <span>{item.human_status === "accepted" ? "已确认" : item.human_status === "rejected" ? "未采纳" : "已编辑确认"}</span>}
+                {item.human_status === "pending" ? <><button type="button" disabled={decisionBusyId !== null} onClick={() => void decide(item.id, "accepted")}>{decisionBusyId === item.id ? "保存中…" : "确认"}</button><button type="button" disabled={decisionBusyId !== null} onClick={() => void decide(item.id, "rejected")}>不采纳</button></> : <span>{item.human_status === "accepted" ? "已确认" : item.human_status === "rejected" ? "未采纳" : "已编辑确认"}</span>}
               </div>
             </article>)}
             <button className="button text" type="button" onClick={() => void triggerAIReview()}>重新运行 AI 复核</button>

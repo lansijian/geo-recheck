@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from collections.abc import Generator
 
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine, event, inspect, text
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.config import DATABASE_PATH
@@ -19,6 +20,13 @@ engine = create_engine(
     f"sqlite:///{DATABASE_PATH.as_posix()}",
     connect_args={"check_same_thread": False},
 )
+
+
+@event.listens_for(engine, "connect")
+def _enable_sqlite_foreign_keys(dbapi_connection, _) -> None:
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
 
 
@@ -63,15 +71,15 @@ LEGACY_POINT_COLUMNS = (
 
 
 def _add_missing_columns(connection, table: str, columns: dict[str, str]) -> None:
-    existing = {column["name"] for column in inspect(engine).get_columns(table)}
+    existing = {column["name"] for column in inspect(connection).get_columns(table)}
     for name, sql_type in columns.items():
         if name not in existing:
             connection.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {sql_type}"))
 
 
-def _monitor_points_need_rebuild() -> bool:
+def _monitor_points_need_rebuild(connection) -> bool:
     """The legacy schema declared latitude/longitude NOT NULL; new points may have neither."""
-    for column in inspect(engine).get_columns("monitor_points"):
+    for column in inspect(connection).get_columns("monitor_points"):
         if column["name"] == "latitude":
             return not column["nullable"]
     return False
@@ -125,17 +133,29 @@ def _backfill_marker_assignments(connection) -> None:
                 )
 
 
-def migrate_schema() -> None:
+def _repair_dangling_baselines(connection) -> None:
+    """A legacy demo reset deleted every inspection and left point references stale."""
+    connection.execute(
+        text(
+            "UPDATE monitor_points SET baseline_inspection_id = NULL "
+            "WHERE baseline_inspection_id IS NOT NULL AND NOT EXISTS ("
+            "SELECT 1 FROM inspections WHERE inspections.id = monitor_points.baseline_inspection_id)"
+        )
+    )
+
+
+def migrate_schema(target_engine: Engine = engine) -> None:
     """Additive migration plus a guarded rebuild so an existing SQLite file stays usable."""
-    with engine.begin() as connection:
+    with target_engine.begin() as connection:
         _add_missing_columns(
             connection, "inspections",
             {**V03_INSPECTION_COLUMNS, **V04_INSPECTION_COLUMNS, **V05_INSPECTION_COLUMNS},
         )
         _add_missing_columns(connection, "monitor_points", V05_POINT_COLUMNS)
-        if _monitor_points_need_rebuild():
+        if _monitor_points_need_rebuild(connection):
             _rebuild_monitor_points(connection)
         _backfill_marker_assignments(connection)
+        _repair_dangling_baselines(connection)
 
 
 def get_db() -> Generator[Session, None, None]:

@@ -21,12 +21,24 @@ from app.services.registry import boards_for_point, match_point, point_to_dict
 logger = logging.getLogger("uvicorn.error")
 
 DEMO_PROVENANCE = {
+    "mode": "demo",
     "story": "贵州仁怀基层地灾监测员公开工作场景",
     "story_source": "https://gz.people.com.cn/n2/2026/0522/c361324-41588761.html",
     "wall_dataset": "Özgenel Concrete Crack Segmentation Dataset",
     "wall_source": "https://data.mendeley.com/datasets/jwsn7tfbrp/1",
     "license": "CC BY 4.0",
     "deformation": "controlled synthetic wall-plane displacement",
+    "is_real_guizhou_monitoring_data": False,
+}
+
+FIELD_PROVENANCE = {
+    "mode": "field",
+    "story": "用户创建监测点的现场复测",
+    "story_source": "",
+    "wall_dataset": "监测员现场上传图像",
+    "wall_source": "",
+    "license": "用户提供的现场数据",
+    "deformation": "OpenCV 标靶几何复测",
     "is_real_guizhou_monitoring_data": False,
 }
 
@@ -82,7 +94,7 @@ def inspection_to_dict(inspection: Inspection, point: MonitorPoint) -> dict:
         "previous_distance_mm": inspection.previous_distance_mm,
         "current_distance_mm": inspection.current_distance_mm,
         "delta_mm": inspection.opening_delta_mm if inspection.opening_delta_mm is not None else inspection.delta_opening_mm,
-        "crack_id": inspection.crack_id or "CRACK-W01",
+        "crack_id": inspection.crack_id or point.monitor_point_id,
         "scene_type": inspection.scene_type or "wall_crack_recheck",
         "baseline_crack_width_mm": inspection.baseline_crack_width_mm,
         "opening_delta_mm": inspection.opening_delta_mm if inspection.opening_delta_mm is not None else inspection.delta_opening_mm,
@@ -99,7 +111,11 @@ def inspection_to_dict(inspection: Inspection, point: MonitorPoint) -> dict:
         ),
         "measurement_mode": inspection.measurement_mode or "legacy_dual_pnp_distance",
         "detector_type": inspection.detector_type or "opencv_aruco_apriltag_36h11",
-        "data_provenance": json.loads(inspection.data_provenance) if inspection.data_provenance else DEMO_PROVENANCE,
+        "data_provenance": (
+            json.loads(inspection.data_provenance)
+            if inspection.data_provenance
+            else (DEMO_PROVENANCE if point.is_demo_location else FIELD_PROVENANCE)
+        ),
         "quality_score": inspection.quality_score,
         "status": inspection.measurement_status,
         "human_confirmed": inspection.human_confirmed,
@@ -184,6 +200,7 @@ def create_measurement(
         point = session.get(MonitorPoint, "MP-03")
     if point is None:
         raise ValueError("未能从左右视觉标靶自动匹配监测点。")
+    is_demo_capture = bool(point.is_demo_location)
 
     if capture_mode not in {"baseline", "recheck"}:
         raise ValueError("采集模式必须为 baseline 或 recheck。")
@@ -275,7 +292,7 @@ def create_measurement(
         location_match = _haversine_m(browser_lat, browser_lon, point.latitude, point.longitude) <= 100
         location_mode = "browser"
         latitude, longitude = browser_lat, browser_lon
-    elif DEMO_LOCATION_MODE and point.latitude is not None:
+    elif DEMO_LOCATION_MODE and is_demo_capture and point.latitude is not None:
         location_match = True
         location_mode = "demo"
         latitude, longitude = point.latitude, point.longitude
@@ -303,11 +320,14 @@ def create_measurement(
         opening_since_baseline_mm=opening_since_baseline,
         shear_since_baseline_mm=shear_since_baseline,
         camera_profile_is_demo=bool(profile.get("is_demo_profile", False)),
-        crack_id=point.structure_name if point.monitor_point_id != "MP-03" else "CRACK-W01",
-        baseline_crack_width_mm=8.0 if point.monitor_point_id == "MP-03" else None,
+        crack_id="CRACK-W01" if is_demo_capture else point.monitor_point_id,
+        baseline_crack_width_mm=8.0 if is_demo_capture else None,
         measurement_mode=result.measurement_mode,
         detector_type=result.detector_type,
-        data_provenance=json.dumps(DEMO_PROVENANCE, ensure_ascii=False),
+        data_provenance=json.dumps(
+            DEMO_PROVENANCE if is_demo_capture else FIELD_PROVENANCE,
+            ensure_ascii=False,
+        ),
         quality_score=result.quality.score,
         measurement_status=status,
         human_confirmed=False,
@@ -353,7 +373,7 @@ def create_measurement(
             ensure_ascii=False,
         ),
         remark=profile.get("warning") if profile.get("is_demo_profile") else None,
-        demo_case_id=demo_case_id,
+        demo_case_id=demo_case_id if demo_case_valid else None,
     )
     session.add(record)
     session.commit()

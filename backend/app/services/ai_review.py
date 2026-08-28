@@ -153,7 +153,7 @@ def run_and_persist_ai_review(
             images.previous,
             images.current,
             {
-                "crack_id": inspection.crack_id or "CRACK-W01",
+                "crack_id": inspection.crack_id or inspection.monitor_point_id,
                 "opening_delta_mm": (
                     inspection.opening_delta_mm
                     if inspection.measurement_status != "rejected"

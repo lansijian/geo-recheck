@@ -28,6 +28,7 @@ export default function RecordPage() {
   const confirmedItems = record.ai_review?.items.filter((item) => item.human_status === "accepted" || item.human_status === "edited") ?? [];
   const rejectedItems = record.ai_review?.items.filter((item) => item.human_status === "rejected") ?? [];
   const caseBase = record.demo_case_id ? `/demo-cases/${record.demo_case_id}` : null;
+  const isDemoRecord = record.data_provenance.mode === "demo" || Boolean(record.demo_case_id);
 
   return (
     <section className="page record-page">
@@ -47,7 +48,7 @@ export default function RecordPage() {
           <div><dt>监测对象</dt><dd>{record.monitor_point_name}</dd></div>
           <div><dt>裂缝编号</dt><dd>{record.crack_id}</dd></div>
           <div><dt>位置描述</dt><dd>{record.location_description}</dd></div>
-          <div><dt>数据性质</dt><dd>公开场景复原 / 受控仿真</dd></div>
+          <div><dt>数据性质</dt><dd>{isDemoRecord ? "公开场景复原 / 受控仿真" : "用户点位现场采集 / 几何复测"}</dd></div>
           <div><dt>质量状态</dt><dd>{record.status === "confirmed" ? "通过 · 已确认" : record.status}</dd></div>
           <div><dt>人工确认</dt><dd>{record.human_confirmed ? "已确认" : "未确认"}</dd></div>
           <div className="wide"><dt>备注</dt><dd>{record.remark || "无"}</dd></div>
@@ -59,7 +60,7 @@ export default function RecordPage() {
         </section>
 
         <section className="record-evidence"><h3>现场与算法证据</h3><div>{caseBase ? <Evidence src={`${caseBase}/context.jpg`} alt="记录中的现场全景" label="现场全景" /> : null}<Evidence src={record.evidence.original} alt="记录中的本次原始墙体照片" label="本次近景" /><Evidence src={record.evidence.rectified} alt="记录中的墙面正视校正图" label="正视校正" /></div></section>
-        <p className="record-boundary">AI 观察结果经监测员人工确认。本记录不构成地质灾害风险判断。真实工作故事来自公开报道；图像来自 CC BY 4.0 开放数据；变化为受控仿真。</p>
+        <p className="record-boundary">AI 观察结果经监测员人工确认。本记录不构成地质灾害风险判断。{isDemoRecord ? "工作故事来自公开报道；图像来自 CC BY 4.0 开放数据；变化为受控仿真。" : "图像由现场监测员上传，毫米结果来自 OpenCV 标靶几何测量。"}</p>
       </article>
       <section className="closing-statement"><span>几何算法负责量，阶跃多模态负责看。</span><strong>正式记录由监测员确认。</strong></section>
     </section>

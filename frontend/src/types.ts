@@ -21,7 +21,6 @@ export type Point = {
   last_confirmed_capture_time?: string | null;
   last_confirmed_opening_since_baseline_mm?: number | null;
   last_confirmed_camera_profile_is_demo?: boolean;
-  demo_ready?: boolean;
 };
 
 export type PointCreatePayload = {
@@ -82,6 +81,7 @@ export type Measurement = Point & {
   measurement_mode: string;
   detector_type: string;
   data_provenance: {
+    mode?: "demo" | "field";
     story: string;
     story_source: string;
     wall_dataset: string;

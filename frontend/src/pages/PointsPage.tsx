@@ -24,9 +24,9 @@ export default function PointsPage() {
     <section className="page points-page">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">用户自建监测点</p>
-          <h1>裂缝管理</h1>
-          <p>为每条墙缝建立带标靶的监测点，采集基线后即可开始复测。</p>
+          <p className="eyebrow">固定裂缝点位 · 全生命周期留痕</p>
+          <h1>监测点</h1>
+          <p>一个点位对应一组唯一复测贴；先建立基线，再按周期复测并由监测员确认。</p>
         </div>
         <Link className="button primary" to="/points/new">新建监测点</Link>
       </div>
@@ -44,6 +44,7 @@ export default function PointsPage() {
                 <div className="point-row-main">
                   <strong>{point.monitor_point_id}</strong>
                   <span>{point.monitor_point_name}</span>
+                  <small>{point.hazard_name} · {point.location_description}</small>
                 </div>
                 <div className="point-row-meta">
                   <span>{point.structure_name}</span>

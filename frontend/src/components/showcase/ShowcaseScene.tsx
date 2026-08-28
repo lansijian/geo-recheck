@@ -67,6 +67,8 @@ function Worker({ step, activeCase }: { step: FieldStep; activeCase: ShowcaseCas
   const group = useRef<Group>(null);
   const leftArm = useRef<Group>(null);
   const rightArm = useRef<Group>(null);
+  const leftLeg = useRef<Group>(null);
+  const rightLeg = useRef<Group>(null);
   const target = useMemo(() => new Vector3(), []);
   useFrame(({ clock }, delta) => {
     if (!group.current) return;
@@ -76,10 +78,17 @@ function Worker({ step, activeCase }: { step: FieldStep; activeCase: ShowcaseCas
     group.current.position.lerp(target, 1 - Math.exp(-delta * (WALK_STEPS.has(step.id) ? .75 : 2.4)));
     group.current.rotation.y = MathUtils.damp(group.current.rotation.y, step.id === "walking" ? -.35 : step.id === "approach_crack" ? -.15 : 0, 3, delta);
     const walking = WALK_STEPS.has(step.id);
-    group.current.position.y = destination[1] + (walking ? Math.abs(Math.sin(clock.elapsedTime * 6)) * .07 : 0);
-    const phoneAngle = PHONE_STEPS.has(step.id) ? -1.2 : walking ? Math.sin(clock.elapsedTime * 6) * .45 : 0;
-    if (leftArm.current) leftArm.current.rotation.x = MathUtils.damp(leftArm.current.rotation.x, phoneAngle, 6, delta);
-    if (rightArm.current) rightArm.current.rotation.x = MathUtils.damp(rightArm.current.rotation.x, phoneAngle, 6, delta);
+    // The worker faces the wall along -Z. Positive X rotation brings the hands and
+    // phone forward; the previous negative angle put them behind the torso. Keep
+    // the pelvis level and use opposing limb swings instead of bouncing the body.
+    group.current.position.y = destination[1];
+    const stride = walking ? Math.sin(clock.elapsedTime * 6) : 0;
+    const leftArmAngle = PHONE_STEPS.has(step.id) ? 1.12 : stride * .42;
+    const rightArmAngle = PHONE_STEPS.has(step.id) ? 1.12 : -stride * .42;
+    if (leftArm.current) leftArm.current.rotation.x = MathUtils.damp(leftArm.current.rotation.x, leftArmAngle, 6, delta);
+    if (rightArm.current) rightArm.current.rotation.x = MathUtils.damp(rightArm.current.rotation.x, rightArmAngle, 6, delta);
+    if (leftLeg.current) leftLeg.current.rotation.x = MathUtils.damp(leftLeg.current.rotation.x, -stride * .34, 7, delta);
+    if (rightLeg.current) rightLeg.current.rotation.x = MathUtils.damp(rightLeg.current.rotation.x, stride * .34, 7, delta);
   });
   return (
     <group ref={group} position={activeCase.field_scene.worker_entry}>
@@ -87,8 +96,8 @@ function Worker({ step, activeCase }: { step: FieldStep; activeCase: ShowcaseCas
       <mesh position={[0, 1.05, 0]} castShadow><capsuleGeometry args={[.27, .75, 6, 12]} /><meshStandardMaterial color="#e39b23" /></mesh>
       <group ref={leftArm} position={[-.32, 1.28, 0]}><mesh position={[0, -.35, 0]} castShadow><capsuleGeometry args={[.08, .55, 4, 8]} /><meshStandardMaterial color="#d7a57b" /></mesh></group>
       <group ref={rightArm} position={[(.32), 1.28, 0]}><mesh position={[0, -.35, 0]} castShadow><capsuleGeometry args={[.08, .55, 4, 8]} /><meshStandardMaterial color="#d7a57b" /></mesh><mesh position={[0, -.7, -.08]}><boxGeometry args={[.22, .38, .05]} /><meshStandardMaterial color="#17231f" /></mesh></group>
-      <mesh position={[-.14, .35, 0]} castShadow><capsuleGeometry args={[.09, .55, 4, 8]} /><meshStandardMaterial color="#263a35" /></mesh>
-      <mesh position={[(.14), .35, 0]} castShadow><capsuleGeometry args={[.09, .55, 4, 8]} /><meshStandardMaterial color="#263a35" /></mesh>
+      <group ref={leftLeg} position={[-.14, .63, 0]}><mesh position={[0, -.28, 0]} castShadow><capsuleGeometry args={[.09, .55, 4, 8]} /><meshStandardMaterial color="#263a35" /></mesh></group>
+      <group ref={rightLeg} position={[(.14), .63, 0]}><mesh position={[0, -.28, 0]} castShadow><capsuleGeometry args={[.09, .55, 4, 8]} /><meshStandardMaterial color="#263a35" /></mesh></group>
     </group>
   );
 }

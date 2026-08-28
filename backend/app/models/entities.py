@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, CheckConstraint, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
@@ -25,7 +25,10 @@ class MonitorPoint(Base):
     left_marker_group: Mapped[str] = mapped_column(String(100))   # legacy: derived, never read
     right_marker_group: Mapped[str] = mapped_column(String(100))  # legacy: derived, never read
     is_demo_location: Mapped[bool] = mapped_column(Boolean, default=True)
-    baseline_inspection_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    baseline_inspection_id: Mapped[str | None] = mapped_column(
+        ForeignKey("inspections.id", ondelete="SET NULL", use_alter=True),
+        nullable=True,
+    )
     context_photo_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
     context_photo_captured_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     context_callouts: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -40,10 +43,15 @@ class MonitorPoint(Base):
 
 class MarkerAssignment(Base):
     __tablename__ = "marker_assignments"
+    __table_args__ = (
+        UniqueConstraint("monitor_point_id", "side", "slot", name="uq_marker_point_side_slot"),
+        CheckConstraint("side IN ('left', 'right')", name="ck_marker_side"),
+        CheckConstraint("slot BETWEEN 0 AND 3", name="ck_marker_slot"),
+    )
 
     marker_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     monitor_point_id: Mapped[str] = mapped_column(
-        ForeignKey("monitor_points.monitor_point_id"), index=True
+        ForeignKey("monitor_points.monitor_point_id", ondelete="RESTRICT"), index=True
     )
     side: Mapped[str] = mapped_column(String(8))
     slot: Mapped[int] = mapped_column(Integer)
@@ -55,7 +63,9 @@ class Inspection(Base):
     __tablename__ = "inspections"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    monitor_point_id: Mapped[str] = mapped_column(String(64), index=True)
+    monitor_point_id: Mapped[str] = mapped_column(
+        ForeignKey("monitor_points.monitor_point_id", ondelete="RESTRICT"), index=True
+    )
     capture_time: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     observer_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -98,7 +108,9 @@ class AIReview(Base):
     __tablename__ = "ai_reviews"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    inspection_id: Mapped[str] = mapped_column(String(36), index=True)
+    inspection_id: Mapped[str] = mapped_column(
+        ForeignKey("inspections.id", ondelete="CASCADE"), index=True
+    )
     provider: Mapped[str] = mapped_column(String(30), default="stepfun")
     model: Mapped[str] = mapped_column(String(100))
     status: Mapped[str] = mapped_column(String(30), index=True)
@@ -114,8 +126,12 @@ class AIReviewItem(Base):
     __tablename__ = "ai_review_items"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    review_id: Mapped[str] = mapped_column(String(36), index=True)
-    inspection_id: Mapped[str] = mapped_column(String(36), index=True)
+    review_id: Mapped[str] = mapped_column(
+        ForeignKey("ai_reviews.id", ondelete="CASCADE"), index=True
+    )
+    inspection_id: Mapped[str] = mapped_column(
+        ForeignKey("inspections.id", ondelete="CASCADE"), index=True
+    )
     item_index: Mapped[int] = mapped_column(Integer)
     observation_type: Mapped[str] = mapped_column(String(50))
     observation_state: Mapped[str] = mapped_column(String(30))

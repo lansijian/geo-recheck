@@ -244,7 +244,6 @@ def list_points(session: Session = Depends(get_db)) -> list[dict]:
                 "last_confirmed_camera_profile_is_demo": (
                     last.camera_profile_is_demo if last else False
                 ),
-                "demo_ready": point.monitor_point_id == "MP-03",
             }
         )
     return response
