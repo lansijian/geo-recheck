@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "case_id": "case_03_seepage",
+  "title": "墙体裂缝复测 + 疑似新增水迹",
+  "location": "贵州仁怀 · MP-03 · WALL-02",
+  "assets": {
+    "context": "/demo-cases/case_03_seepage/context.jpg",
+    "previous_close": "/demo-cases/case_03_seepage/previous_close.jpg",
+    "current_close": "/demo-cases/case_03_seepage/current_close.jpg"
+  },
+  "geometry": {
+    "measured_opening_delta_mm": 4.793,
+    "expected_opening_delta_mm": 4.8,
+    "quality_gate": "accepted",
+    "quality_score": 0.843168831365076,
+    "quality_reasons": [],
+    "measurement_source": "FastAPI / OpenCV deterministic geometry"
+  },
+  "viewpoint": {
+    "previous": {
+      "yaw": 0.0,
+      "pitch": 0.0
+    },
+    "current": {
+      "yaw": -12.0,
+      "pitch": 8.0
+    },
+    "delta_deg": 14.422,
+    "different": true
+  },
+  "provenance": {
+    "context_source": {
+      "scene_id": "v04_scene_02",
+      "dataset": "Wall Crack Image Dataset for Earthquake and Structural Health Analysis",
+      "source_url": "https://data.mendeley.com/datasets/hxrry6krs7/1",
+      "doi": "10.17632/hxrry6krs7.1",
+      "license": "CC BY 4.0",
+      "source_filename": "OH_crack_7.jpg",
+      "source_file_id": "6b213a69-0e71-4edb-be2c-bdfad0f3ea52",
+      "source_sha256": "5f5ca39bb7e41559f6bc54f47c8d3947b30318786c238a6196a3908b16737a8d",
+      "curated_file": "data/curated_scene_library/scene_02.jpg",
+      "transforms": [
+        "resize_cover_1440x960",
+        "jpeg_quality_91"
+      ],
+      "is_real_guizhou_monitoring_data": false
+    },
+    "close_source": {
+      "scene_id": "wall_scene_001",
+      "dataset": "Özgenel Concrete Crack Segmentation Dataset",
+      "source_file": "data/datasets/ozgenel/rgb/328.jpg",
+      "mask_file": "data/datasets/ozgenel/BW/328.jpg",
+      "source_url": "https://data.mendeley.com/datasets/jwsn7tfbrp/1",
+      "doi": "10.17632/jwsn7tfbrp.1",
+      "license": "CC BY 4.0",
+      "usage": "controlled synthetic hackathon demo",
+      "is_real_guizhou_monitoring_data": false,
+      "is_golden_path": true,
+      "selection_score": 5.37417
+    },
+    "synthetic_changes": [
+      "opening_delta_4.8mm",
+      "viewpoint_yaw_-12_pitch_+8_deg",
+      "controlled_water_stain"
+    ],
+    "disclosure": "公开墙体图片与明确受控变化构成的现场巡查演示，不是真实事故或贵州现场记录。"
+  },
+  "field_scene": {
+    "house_position": [
+      0.0,
+      1.5,
+      -2.0
+    ],
+    "crack_position": [
+      1.65,
+      1.55,
+      0.04
+    ],
+    "drainage_position": [
+      0.0,
+      0.08,
+      1.8
+    ],
+    "worker_entry": [
+      -5.2,
+      0.0,
+      4.8
+    ],
+    "worker_context_stop": [
+      -1.3,
+      0.0,
+      2.5
+    ],
+    "worker_close_stop": [
+      0.8,
+      0.0,
+      1.25
+    ],
+    "controlled_roi": true
+  },
+  "ai_replay": {
+    "provider": "StepFun",
+    "model": "step-3.7-flash",
+    "original_latency_ms": 41008,
+    "attempts": 1,
+    "validated_date": "2026-08-28",
+    "source_artifact": "artifacts/ai_validation_v04/responses.jsonl",
+    "source_run": 1,
+    "parsed": {
+      "scene_consistency": "same_location",
+      "observations": [
+        {
+          "type": "seepage_or_water_stain",
+          "state": "uncertain",
+          "evidence": "图3中裂缝右侧出现图2中未见的不规则深色区域，疑似新增潮湿或水迹，但无法完全排除拍摄时光照角度或阴影造成的视觉差异，需人工现场确认",
+          "confidence": "medium",
+          "requires_human_check": true
+        },
+        {
+          "type": "none",
+          "state": "stable",
+          "evidence": "复测标志CRACK-W01清晰完整且无遮挡；未观察到裂缝端点延长、新分支、表面剥落、错台或明显凹凸变化",
+          "confidence": "high",
+          "requires_human_check": true
+        }
+      ],
+      "coverage_complete": true,
+      "missing_views": [],
+      "record_draft": "本次复测区域与上次一致（CRACK-W01）。复测标志完好。裂缝形态未观察到明显端点延长或新分支。裂缝右侧疑似新增潮湿痕迹，但需人工确认是否由光照或渗水导致。建议现场复核疑似水迹区域。",
+      "disclaimer": "本复核仅基于图像视觉比较，不包含地质灾害风险评估。毫米级位移数据由外部几何算法提供。所有观察结果需经人工现场确认。"
+    }
+  }
+}

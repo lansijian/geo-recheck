@@ -1,16 +1,18 @@
-import { SHOWCASE_STEPS, type ShowcaseStep } from "./showcaseData";
+import { PUBLIC_PHASES, type FieldStep, type ShowcaseCase } from "./showcaseData";
 
-export default function ShowcaseSidebar({ stepIndex, step }: { stepIndex: number; step: ShowcaseStep }) {
+export default function ShowcaseSidebar({ step, activeCase, isPlaying }: { step: FieldStep; activeCase: ShowcaseCase; isPlaying: boolean }) {
+  const currentIndex = PUBLIC_PHASES.findIndex((phase) => phase.id === step.publicPhase);
   return (
-    <aside className="showcase-sidebar" aria-label="当前演示步骤说明" data-testid="showcase-sidebar">
-      <header><span>给评委看的解释层</span><h2>现在系统在做什么？</h2></header>
-      <ol className="showcase-timeline">
-        {SHOWCASE_STEPS.map((item, index) => <li className={index === stepIndex ? "active" : index < stepIndex ? "done" : ""} key={item.id}><span>{index < stepIndex ? "✓" : item.number}</span><strong>{item.label}</strong></li>)}
+    <aside className="showcase-sidebar" aria-label="本次巡查步骤" data-testid="showcase-sidebar">
+      <header><span>FIELD INSPECTION</span><h2>本次巡查</h2><small>{isPlaying ? "自动推进中" : step.id === "human_confirm" ? "等待监测员操作" : "手动控制"}</small></header>
+      <ol className="showcase-timeline five-steps">
+        {PUBLIC_PHASES.map((phase, index) => <li className={index === currentIndex ? "active" : index < currentIndex ? "done" : ""} key={phase.id}><span>{index < currentIndex ? "✓" : phase.number}</span><strong>{phase.label}</strong></li>)}
       </ol>
-      <section className="current-explanation"><span>当前步骤 · {step.number}</span><h3>{step.sceneTitle}</h3><p>{step.explanation}</p></section>
-      <section className="role-boundary"><h3>四个角色，各守边界</h3><div><b>几何</b><span>量相对变化</span></div><div><b>AI</b><span>看可见现象</span></div><div><b>人工</b><span>确认是否采纳</span></div><div><b>系统</b><span>保存完整证据</span></div></section>
-      <section className="job-value"><h3>这个岗位为什么需要它？</h3><p>它补充基层巡查最后一公里，减少来回翻照片、口头描述和手写整理，让裂缝变化、图像证据与人工结论留在同一条记录里。</p></section>
-      <section className="showcase-boundary"><strong>能力边界</strong><span>不判断灾害风险</span><span>不自动预警</span><span>不替代专业设备</span><span>不代替人工决策</span></section>
+      <section className="current-explanation"><span>当前动作 · {step.label}</span><h3>{step.sceneTitle}</h3><p>{step.explanation}</p></section>
+      <section className="inspection-facts"><h3>数据链状态</h3><div><b>几何</b><span>本机 FastAPI / OpenCV</span></div><div><b>AI</b><span>StepFun 实测回放 · run {activeCase.ai_replay.source_run}</span></div><div><b>记录</b><span>本机 SQLite 真实写入</span></div><div><b>人工</b><span>确认前绝不自动采纳</span></div></section>
+      <section className="job-value"><h3>同一个空间，同一条证据链</h3><p>房屋、挡墙、排水沟和裂缝点存在于同一个 Three.js 场景。手机全景与近景由这个场景的摄像机拍摄，裂缝墙面纹理同时作为几何证据源。</p></section>
+      <section className="replay-proof"><strong>AI 实测回放</strong><span>{activeCase.ai_replay.provider}</span><span>{activeCase.ai_replay.model}</span><span>{(activeCase.ai_replay.original_latency_ms / 1000).toFixed(1)} s</span><small>验证日期 {activeCase.ai_replay.validated_date}</small></section>
+      <section className="showcase-boundary"><strong>能力边界</strong><span>不判断灾害风险</span><span>不自动预警</span><span>不替代专业设备</span><span>人工决定是否采纳</span></section>
     </aside>
   );
 }

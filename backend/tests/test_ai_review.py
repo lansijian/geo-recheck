@@ -17,6 +17,7 @@ from app.services.ai_review import (
     build_confirmed_record_text,
     decide_ai_review_item,
     latest_ai_review,
+    persist_replayed_ai_review,
     run_and_persist_ai_review,
 )
 from app.services.stepfun_observer import (
@@ -223,4 +224,34 @@ def test_stale_running_review_is_recovered_as_interrupted() -> None:
         assert "服务中断后未完成" in (review.error_message or "")
 
         session.delete(review)
+        session.commit()
+
+
+def test_hybrid_replay_persists_audited_stepfun_response() -> None:
+    Base.metadata.create_all(bind=engine)
+    inspection_id = str(uuid.uuid4())
+    with SessionLocal() as session:
+        inspection = Inspection(
+            id=inspection_id,
+            monitor_point_id="MP-03",
+            crack_id="CRACK-W01",
+            opening_delta_mm=4.8,
+            measurement_status="pending",
+            quality_score=0.9,
+        )
+        session.add(inspection)
+        session.commit()
+
+        result = persist_replayed_ai_review(session, inspection, "case_03_seepage")
+
+        assert result["status"] == "completed"
+        assert result["provider"] == "stepfun"
+        assert result["model"] == "step-3.7-flash"
+        assert result["latency_ms"] == 41008
+        assert any(item["type"] == "seepage_or_water_stain" for item in result["items"])
+        assert all(item["human_status"] == "pending" for item in result["items"])
+
+        session.execute(delete(AIReviewItem).where(AIReviewItem.inspection_id == inspection_id))
+        session.execute(delete(AIReview).where(AIReview.inspection_id == inspection_id))
+        session.delete(inspection)
         session.commit()

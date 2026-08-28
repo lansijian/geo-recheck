@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app import config
 from app.models import AIReview, AIReviewItem, Inspection
+from app.schemas.ai_review import AIFieldReview
 from app.services.stepfun_observer import StepFunReviewError, run_field_review
 
 
@@ -143,6 +144,51 @@ def run_and_persist_ai_review(
     review.parsed_json = parsed.model_dump_json()
     review.latency_ms = latency_ms
     review.attempts = attempts
+    for index, observation in enumerate(parsed.observations):
+        session.add(
+            AIReviewItem(
+                review_id=review.id,
+                inspection_id=inspection.id,
+                item_index=index,
+                observation_type=observation.type,
+                observation_state=observation.state,
+                evidence=observation.evidence,
+                confidence=observation.confidence,
+                requires_human_check=True,
+                human_status="pending",
+            )
+        )
+    session.commit()
+    return ai_review_to_dict(session, review)
+
+
+def persist_replayed_ai_review(
+    session: Session,
+    inspection: Inspection,
+    case_id: str,
+) -> dict[str, Any]:
+    """Persist one audited StepFun response without making a network call."""
+    _case_paths(case_id)
+    showcase_path = config.DEMO_CASES_ROOT / case_id / "showcase.json"
+    if not showcase_path.is_file():
+        raise ValueError("该案例没有生成 Showcase 单一数据源。")
+    showcase = json.loads(showcase_path.read_text(encoding="utf-8"))
+    replay = showcase.get("ai_replay") or {}
+    if replay.get("source_artifact") != "artifacts/ai_validation_v04/responses.jsonl":
+        raise ValueError("AI 回放来源不是已审计的真实验证 artifact。")
+    parsed = AIFieldReview.model_validate(replay.get("parsed"))
+    review = AIReview(
+        id=str(uuid.uuid4()),
+        inspection_id=inspection.id,
+        provider="stepfun",
+        model=str(replay.get("model") or "step-3.7-flash"),
+        status="completed",
+        parsed_json=parsed.model_dump_json(),
+        latency_ms=int(replay["original_latency_ms"]),
+        attempts=int(replay.get("attempts") or 1),
+    )
+    inspection.demo_case_id = case_id
+    session.add(review)
     for index, observation in enumerate(parsed.observations):
         session.add(
             AIReviewItem(
