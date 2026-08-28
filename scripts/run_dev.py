@@ -55,7 +55,8 @@ def main() -> int:
         )
         wait_for_backend(backend)
         print("Backend ready: http://127.0.0.1:8000", flush=True)
-        frontend = subprocess.Popen(["npm.cmd", "run", "dev"], cwd=ROOT / "frontend")
+        npm_command = "npm.cmd" if sys.platform == "win32" else "npm"
+        frontend = subprocess.Popen([npm_command, "run", "dev"], cwd=ROOT / "frontend")
         print("Frontend: http://127.0.0.1:5173", flush=True)
         return frontend.wait()
     except KeyboardInterrupt:

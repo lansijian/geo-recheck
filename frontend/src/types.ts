@@ -6,13 +6,33 @@ export type Point = {
   structure_id: string;
   structure_name: string;
   location_description: string;
-  latitude: number;
-  longitude: number;
+  latitude: number | null;
+  longitude: number | null;
+  elevation: number | null;
   baseline_mm: number;
   is_demo_location: boolean;
+  left_marker_group: number[];
+  right_marker_group: number[];
+  baseline_inspection_id: string | null;
+  baseline_status: "missing" | "confirmed";
+  context_photo_path: string | null;
+  context_photo_captured_at: string | null;
   last_capture_time?: string | null;
   last_distance_mm?: number | null;
   demo_ready?: boolean;
+};
+
+export type PointCreatePayload = {
+  monitor_point_id: string;
+  hazard_id: string;
+  hazard_name: string;
+  monitor_point_name: string;
+  structure_id: string;
+  structure_name: string;
+  location_description: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  elevation?: number | null;
 };
 
 export type Evidence = {
@@ -53,6 +73,10 @@ export type Measurement = Point & {
   opening_delta_mm: number | null;
   shear_delta_mm: number | null;
   out_of_plane_delta_mm: number | null;
+  capture_mode: "baseline" | "recheck";
+  opening_since_baseline_mm: number | null;
+  shear_since_baseline_mm: number | null;
+  camera_profile_is_demo: boolean;
   measurement_mode: string;
   detector_type: string;
   data_provenance: {

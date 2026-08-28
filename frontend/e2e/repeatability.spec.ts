@@ -2,9 +2,10 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
+import { resolvePython } from "./helpers";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const python = process.env.GEORECHECK_PYTHON ?? path.join(projectRoot, ".venv", "Scripts", "python.exe");
+const python = resolvePython(projectRoot);
 
 function resetDemo() {
   execFileSync(python, [path.join(projectRoot, "scripts", "reset_demo.py")], { cwd: projectRoot });
@@ -25,7 +26,7 @@ test("连续 10 次一分钟 Golden Path 均完成相对张开、确认和记录
     await page.getByRole("button", { name: "开始分析" }).click();
     expect((await responsePromise).status(), `run ${run} measure response`).toBe(200);
     await expect(page).toHaveURL(/\/result\/[0-9a-f-]+$/);
-    await expect(page.getByText("较上次张开", { exact: true }), `run ${run} semantics`).toBeVisible();
+    await expect(page.getByText("较基线累计", { exact: true }), `run ${run} semantics`).toBeVisible();
     const opening = Number((await page.locator(".opening-number").textContent())?.replace(/[^0-9.-]/g, ""));
     expect(opening, `run ${run} opening`).toBeGreaterThanOrEqual(4);
     expect(opening, `run ${run} opening`).toBeLessThanOrEqual(6);

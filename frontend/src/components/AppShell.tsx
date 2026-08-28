@@ -14,6 +14,7 @@ export default function AppShell({ children }: PropsWithChildren) {
         </NavLink>
         <nav aria-label="主导航">
           <NavLink to="/capture?demo=1&case=case_03_seepage">一分钟演示</NavLink>
+          <NavLink to="/points">裂缝管理</NavLink>
           <NavLink to="/scenario">真实场景</NavLink>
           <NavLink to="/technology">技术依据</NavLink>
           <details className="settings-menu">

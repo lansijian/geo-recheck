@@ -81,9 +81,29 @@ curl http://127.0.0.1:8000/api/health
 npm run build --prefix frontend
 ```
 
-当前 `npm run e2e --prefix frontend` 尚未支持 macOS：测试文件硬编码了 Windows 的
-`.venv/Scripts/python.exe`，并且需要单独安装 Playwright Chromium。该限制不会影响
-Demo 的手动启动和浏览器主流程；跨平台 E2E 支持应作为后续工程任务处理。
+`npm run e2e --prefix frontend` 现已支持 macOS：测试脚本通过 `frontend/e2e/helpers.ts`
+的 `resolvePython()` 按平台解析 Python 可执行文件路径，`playwright.config.ts` 的
+`webServer` 命令也会按 `process.platform` 选择 `scripts/run_dev.py`（macOS/Linux）
+或 `scripts/run_dev.cmd`（Windows）。
+
+首次在 macOS 上运行 E2E 前，需要单独安装一次 Playwright 的 Chromium：
+
+```bash
+npm exec --prefix frontend playwright install chromium
+```
+
+之后即可直接运行：
+
+```bash
+npm run e2e --prefix frontend
+```
+
+如果你的 Python 可执行文件不在仓库默认的 `.venv/bin/python`（例如使用了系统 Python
+或自定义虚拟环境路径），可以通过环境变量覆盖：
+
+```bash
+GEORECHECK_PYTHON=/path/to/python npm run e2e --prefix frontend
+```
 
 ## Demo 数据边界
 

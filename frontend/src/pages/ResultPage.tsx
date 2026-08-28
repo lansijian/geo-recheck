@@ -100,8 +100,11 @@ export default function ResultPage() {
 
   const accepted = result.status === "pending";
   const metrics = result.quality_metrics ?? {};
-  const opening = result.opening_delta_mm ?? result.delta_mm;
-  const openingText = opening == null ? "未输出" : `${opening >= 0 ? "+" : ""}${opening.toFixed(1)} mm`;
+  const isBaselineCapture = result.capture_mode === "baseline";
+  const cumulative = result.opening_since_baseline_mm;
+  const cumulativeText = cumulative == null ? "未输出" : `${cumulative >= 0 ? "+" : ""}${cumulative.toFixed(1)} mm`;
+  const perPeriod = result.opening_delta_mm;
+  const perPeriodText = perPeriod == null ? "—" : `${perPeriod >= 0 ? "+" : ""}${perPeriod.toFixed(1)} mm`;
   const caseBase = result.demo_case_id ? `/demo-cases/${result.demo_case_id}` : null;
   const pendingCount = aiReview?.items.filter((item) => item.human_status === "pending").length ?? 0;
 
@@ -112,12 +115,32 @@ export default function ResultPage() {
         <span className={`status-pill ${accepted ? "ok" : "warning"}`}>{accepted ? "几何质量通过 · 等待人工确认" : "几何质量未通过 · 请重新拍摄"}</span>
       </div>
 
+      {result.camera_profile_is_demo ? <div className="notice error" role="alert">未标定相机，毫米值仅供参考。</div> : null}
+
       <div className="result-columns">
         <section className={`geometry-card ${accepted ? "" : "rejected"}`}>
-          <p className="eyebrow">几何复测</p><h2>较上次张开</h2>
-          <strong className="opening-number">{openingText}</strong>
+          <p className="eyebrow">几何复测</p>
+          {isBaselineCapture ? (
+            <>
+              <h2>基线已建立</h2>
+              <strong className="opening-number">基线已建立</strong>
+            </>
+          ) : (
+            <>
+              <h2>较基线累计</h2>
+              <strong className="opening-number">{cumulativeText}</strong>
+              <p>较上次 {perPeriodText}</p>
+            </>
+          )}
           {result.shear_delta_mm != null ? <p>剪切变化 {result.shear_delta_mm >= 0 ? "+" : ""}{result.shear_delta_mm.toFixed(1)} mm</p> : null}
           <small>来自视觉标志 + 几何校正，不是大模型估算</small>
+          {result.baseline_crack_width_mm != null ? (
+            <div className="controlled-width-note">
+              <div><span>首次人工建档开度</span><strong>{result.baseline_crack_width_mm.toFixed(1)} mm</strong></div>
+              <div><span>换算复测开度</span><strong>{(result.baseline_crack_width_mm + (cumulative ?? 0)).toFixed(1)} mm</strong></div>
+              <p>首次开度为人工卷尺记录，仅用于与本系统相对复测结果做延续性参照，不代表系统输出的绝对精度。</p>
+            </div>
+          ) : null}
           <div className="geometry-proof"><span>标志识别</span><span>正视校正</span><span>质量门控</span></div>
         </section>
 

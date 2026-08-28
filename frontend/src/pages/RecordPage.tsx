@@ -21,7 +21,10 @@ export default function RecordPage() {
 
   if (error) return <section className="page"><div className="notice error">{error}</div></section>;
   if (!record) return <section className="page"><div className="empty">正在生成墙体裂缝复测记录…</div></section>;
-  const opening = record.opening_delta_mm ?? record.delta_mm;
+  const cumulative = record.opening_since_baseline_mm;
+  const cumulativeText = cumulative == null ? "—" : `${cumulative >= 0 ? "+" : ""}${cumulative.toFixed(1)} mm`;
+  const perPeriod = record.opening_delta_mm;
+  const perPeriodText = perPeriod == null ? "—" : `${perPeriod >= 0 ? "+" : ""}${perPeriod.toFixed(1)} mm`;
   const confirmedItems = record.ai_review?.items.filter((item) => item.human_status === "accepted" || item.human_status === "edited") ?? [];
   const rejectedItems = record.ai_review?.items.filter((item) => item.human_status === "rejected") ?? [];
   const caseBase = record.demo_case_id ? `/demo-cases/${record.demo_case_id}` : null;
@@ -29,9 +32,10 @@ export default function RecordPage() {
   return (
     <section className="page record-page">
       <div className="record-toolbar no-print"><div><p className="eyebrow">几何结果 + 人工确认的 AI 观察</p><h1>巡查复测记录</h1></div><div><button className="button" type="button" onClick={() => window.print()}>打印 / 导出 PDF</button><Link className="button primary" to="/">返回首页</Link></div></div>
+      {record.camera_profile_is_demo ? <div className="notice error" role="alert">未标定相机，毫米值仅供参考。</div> : null}
       <article className="paper-record">
-        <header><div><p>贵州仁怀 · 公开工作场景复原</p><h2>墙体裂缝巡查复测记录</h2></div><span>记录编号：{record.id}</span></header>
-        <section className="record-opening"><span>几何测量 · 本次较上次张开</span><strong>{opening != null && opening >= 0 ? "+" : ""}{opening?.toFixed(1) ?? "—"} mm</strong><small>确定性视觉几何</small></section>
+        <header><div><p>{record.monitor_point_name} · {record.structure_name} · {record.scene_type}</p><h2>墙体裂缝巡查复测记录</h2></div><span>记录编号：{record.id}</span></header>
+        <section className="record-opening"><span>几何测量 · 较基线累计</span><strong>{cumulativeText}</strong><small>较上次 {perPeriodText} · 确定性视觉几何</small></section>
         <section className="record-summary"><h3>自动形成的巡查文字</h3><p>{record.record_text ?? "本次未形成记录文字。"}</p></section>
         <dl className="record-grid">
           <div><dt>监测时间</dt><dd>{new Date(record.capture_time).toLocaleString("zh-CN", { hour12: false })}</dd></div>

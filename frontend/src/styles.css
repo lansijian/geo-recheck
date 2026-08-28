@@ -334,6 +334,30 @@ figcaption span { color: var(--muted); font-size: 11px; font-weight: 400; }
 .architecture-flow small { margin-top: 6px; color: var(--muted); }
 .architecture-flow > span { color: var(--green); font-size: 24px; }
 
+/* Crack point management (T4) */
+.point-list { margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; list-style: none; }
+.point-row { border: 1px solid var(--line); background: white; }
+.point-row a { padding: 16px 20px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
+.point-row-main { display: flex; flex-direction: column; gap: 4px; }
+.point-row-main strong { font-size: 16px; }
+.point-row-main span { color: var(--muted); font-size: 13px; }
+.point-row-meta { display: flex; align-items: center; gap: 14px; color: var(--muted); font-size: 13px; }
+.baseline-badge { padding: 6px 11px; border-radius: 999px; font-size: 12px; font-weight: 800; white-space: nowrap; }
+.baseline-badge.missing { color: #8a4a22; background: #f7e8d7; }
+.baseline-badge.confirmed { color: #145b43; background: #e2efe8; }
+.point-form { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.point-form label { display: flex; flex-direction: column; gap: 6px; color: var(--muted); font-size: 13px; font-weight: 700; }
+.point-form label.wide { grid-column: 1 / -1; }
+.point-form input { min-height: 42px; padding: 9px 10px; border: 1px solid #bbc6be; border-radius: 5px; background: white; color: var(--ink); font-weight: 400; }
+.point-form input[type="file"] { padding: 8px 0; border: none; background: none; }
+.point-form button { grid-column: 1 / -1; justify-self: start; }
+.point-detail-columns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+.point-detail-card { padding: 22px; display: flex; flex-direction: column; gap: 14px; align-items: flex-start; border: 1px solid var(--line); background: white; }
+.context-photo-thumb { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border: 1px solid var(--line); }
+.point-history { padding: 24px; border: 1px solid var(--line); background: white; }
+.point-history-list { margin: 14px 0 0; padding: 0; list-style: none; }
+.point-history-list li { padding: 12px 0; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; border-top: 1px solid #edf0ec; font-size: 13px; }
+
 @media (max-width: 900px) {
   .field-hero, .field-reality, .result-columns { grid-template-columns: 1fr; }
   .field-hero { min-height: auto; }
@@ -344,6 +368,7 @@ figcaption span { color: var(--muted); font-size: 11px; font-weight: 400; }
   .v04-flow, .field-checklist { grid-template-columns: 1fr 1fr; }
   .architecture-flow { grid-template-columns: 1fr; }
   .architecture-flow > span { transform: rotate(90deg); text-align: center; }
+  .point-detail-columns { grid-template-columns: 1fr 1fr; }
 }
 
 @media (max-width: 620px) {
@@ -352,4 +377,7 @@ figcaption span { color: var(--muted); font-size: 11px; font-weight: 400; }
   .case-selector, .case-visuals, .v04-flow, .field-checklist, .scenario-boundary, .three-image-evidence { grid-template-columns: 1fr; }
   .case-visuals .context-panel { grid-column: auto; }
   .geometry-proof { grid-template-columns: 1fr; }
+  .point-form { grid-template-columns: 1fr; }
+  .point-detail-columns { grid-template-columns: 1fr; }
+  .point-history-list li { grid-template-columns: 1fr; }
 }

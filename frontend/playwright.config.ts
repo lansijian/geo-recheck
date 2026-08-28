@@ -1,5 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const devServerCommand =
+  process.platform === "win32"
+    ? "set STEPFUN_AI_REVIEW_ENABLED=false&& ..\\scripts\\run_dev.cmd"
+    : "STEPFUN_AI_REVIEW_ENABLED=false ../.venv/bin/python ../scripts/run_dev.py";
+
 export default defineConfig({
   testDir: "./e2e",
   timeout: 30_000,
@@ -18,7 +23,7 @@ export default defineConfig({
   webServer: {
     // Keep browser regression deterministic and prevent a developer's local
     // StepFun credentials from triggering live requests during database resets.
-    command: "set STEPFUN_AI_REVIEW_ENABLED=false&& ..\\scripts\\run_dev.cmd",
+    command: devServerCommand,
     url: "http://127.0.0.1:5173",
     reuseExistingServer: true,
     timeout: 30_000,

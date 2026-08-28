@@ -2,9 +2,10 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { resolvePython } from "./helpers";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const python = process.env.GEORECHECK_PYTHON ?? path.join(projectRoot, ".venv", "Scripts", "python.exe");
+const python = resolvePython(projectRoot);
 const sample = path.join(projectRoot, "data", "wall_demo", "images", "current_open_5mm_yaw20.png");
 
 function resetDemo() {
@@ -136,10 +137,10 @@ test("墙体照片上传后可见真实建筑表面与复测贴", async ({ page 
   expect(failures).toEqual([]);
 });
 
-test("一分钟 Demo 输出较上次张开 4–6 mm 与 before/after", async ({ page }) => {
+test("一分钟 Demo 输出较基线累计 4–6 mm 与 before/after", async ({ page }) => {
   const failures = collectBrowserFailures(page);
   await runOneMinuteDemo(page);
-  await expect(page.getByText("较上次张开", { exact: true })).toBeVisible();
+  await expect(page.getByText("较基线累计", { exact: true })).toBeVisible();
   const opening = Number((await page.locator(".opening-number").textContent())?.replace(/[^0-9.-]/g, ""));
   expect(opening).toBeGreaterThanOrEqual(4);
   expect(opening).toBeLessThanOrEqual(6);
@@ -181,7 +182,7 @@ test("V0.2 持久化能力保留：结果刷新后仍恢复", async ({ page }) =
   await page.reload();
   await expect(page).toHaveURL(url);
   await expect(page.getByRole("heading", { name: "CRACK-W01" })).toBeVisible();
-  await expect(page.getByText("较上次张开", { exact: true })).toBeVisible();
+  await expect(page.getByText("较基线累计", { exact: true })).toBeVisible();
   expect(failures).toEqual([]);
 });
 

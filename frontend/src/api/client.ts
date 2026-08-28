@@ -1,4 +1,4 @@
-import type { AIReview, AIStatus, BenchmarkSummary, DemoCase, Measurement, Point } from "../types";
+import type { AIReview, AIStatus, BenchmarkSummary, DemoCase, Measurement, Point, PointCreatePayload } from "../types";
 
 async function parseResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
@@ -16,10 +16,57 @@ export async function getPoints(): Promise<Point[]> {
   return parseResponse<Point[]>(await fetch("/api/points"));
 }
 
+export async function getPoint(id: string): Promise<Point> {
+  return parseResponse<Point>(await fetch(`/api/points/${encodeURIComponent(id)}`));
+}
+
+export async function createPoint(payload: PointCreatePayload): Promise<Point> {
+  return parseResponse<Point>(
+    await fetch("/api/points", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+  );
+}
+
+export async function getPointHistory(id: string): Promise<Measurement[]> {
+  return parseResponse<Measurement[]>(
+    await fetch(`/api/points/${encodeURIComponent(id)}/history`),
+  );
+}
+
+export function stickerPdfUrl(id: string): string {
+  return `/api/points/${encodeURIComponent(id)}/sticker.pdf`;
+}
+
+export async function uploadContextPhoto(id: string, file: Blob): Promise<Point> {
+  const form = new FormData();
+  form.append("image", file, "context.jpg");
+  return parseResponse<Point>(
+    await fetch(`/api/points/${encodeURIComponent(id)}/context-photo`, {
+      method: "PUT",
+      body: form,
+    }),
+  );
+}
+
+export async function captureBaseline(id: string, file: Blob): Promise<Measurement> {
+  const form = new FormData();
+  form.append("image", file, "baseline.png");
+  return parseResponse<Measurement>(
+    await fetch(`/api/points/${encodeURIComponent(id)}/baseline`, {
+      method: "POST",
+      body: form,
+    }),
+  );
+}
+
 export async function measureImage(
   file: Blob,
   location?: { latitude: number; longitude: number },
   demoCaseId?: string,
+  pointContext?: { point: string; captureMode: "baseline" | "recheck" },
 ): Promise<Measurement> {
   const form = new FormData();
   const filename = file instanceof File ? file.name : "measurement.png";
@@ -30,6 +77,10 @@ export async function measureImage(
   }
   form.append("camera_profile", "demo_webcam_profile");
   if (demoCaseId) form.append("demo_case_id", demoCaseId);
+  if (pointContext) {
+    form.append("point", pointContext.point);
+    form.append("capture_mode", pointContext.captureMode);
+  }
   return parseResponse<Measurement>(
     await fetch("/api/measure", { method: "POST", body: form }),
   );

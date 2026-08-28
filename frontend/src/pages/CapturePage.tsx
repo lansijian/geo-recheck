@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { getDemoCases, measureImage } from "../api/client";
-import type { DemoCase } from "../types";
+import { captureBaseline, getDemoCases, getPoint, measureImage } from "../api/client";
+import type { DemoCase, Point } from "../types";
 
 type FileDetails = { name: string; width: number; height: number; size: number; type: string };
 
@@ -27,8 +27,11 @@ export default function CapturePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const isDemo = searchParams.get("demo") === "1";
   const requestedCase = searchParams.get("case") ?? "case_03_seepage";
+  const pointId = searchParams.get("point") ?? undefined;
+  const captureMode = (searchParams.get("mode") as "baseline" | "recheck" | null) ?? undefined;
   const [cases, setCases] = useState<DemoCase[]>([]);
   const [selectedCaseId, setSelectedCaseId] = useState(requestedCase);
+  const [point, setPoint] = useState<Point | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [details, setDetails] = useState<FileDetails | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -44,12 +47,22 @@ export default function CapturePage() {
   const selectedCase = cases.find((item) => item.case_id === selectedCaseId) ?? null;
 
   useEffect(() => {
+    if (pointId) return;
     let active = true;
     getDemoCases().then((items) => { if (active) setCases(items); }).catch((reason: unknown) => {
       if (active) setError(reason instanceof Error ? reason.message : "Demo Cases 加载失败。");
     });
     return () => { active = false; };
-  }, []);
+  }, [pointId]);
+
+  useEffect(() => {
+    if (!pointId) return;
+    let active = true;
+    getPoint(pointId).then((value) => { if (active) setPoint(value); }).catch((reason: unknown) => {
+      if (active) setError(reason instanceof Error ? reason.message : "监测点加载失败。");
+    });
+    return () => { active = false; };
+  }, [pointId]);
 
   useEffect(() => () => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -87,9 +100,9 @@ export default function CapturePage() {
   }
 
   useEffect(() => {
-    if (!isDemo || cases.length === 0 || file) return;
+    if (!isDemo || pointId || cases.length === 0 || file) return;
     void loadCase(selectedCaseId).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "案例加载失败。"));
-  }, [cases, file, isDemo, selectedCaseId]);
+  }, [cases, file, isDemo, pointId, selectedCaseId]);
 
   async function chooseCase(caseId: string) {
     setSelectedCaseId(caseId);
@@ -138,7 +151,14 @@ export default function CapturePage() {
     timerRef.current = window.setInterval(() => setProcessingStep((value) => Math.min(4, value + 1)), 230);
     try {
       const location = isDemo ? undefined : await requestLocation();
-      const result = await measureImage(file, location, isDemo ? selectedCaseId : undefined);
+      const result = pointId && captureMode === "baseline"
+        ? await captureBaseline(pointId, file)
+        : await measureImage(
+            file,
+            location,
+            pointId ? undefined : (isDemo ? selectedCaseId : undefined),
+            pointId ? { point: pointId, captureMode: captureMode ?? "recheck" } : undefined,
+          );
       setProcessingStep(5);
       navigate(`/result/${result.id}`);
     } catch (reason) {
@@ -155,11 +175,19 @@ export default function CapturePage() {
   return (
     <section className="page capture-page wall-capture">
       <div className="page-heading compact">
-        <div><p className="eyebrow">现场全景 → 裂缝近景</p><h1>{isDemo ? "选择一个现场案例" : "拍摄本次裂缝近景"}</h1><p>Golden Path 默认：墙体裂缝复测 + 疑似新增水迹</p></div>
-        <span className="demo-mode-label">{isDemo ? "V0.4 Demo" : "现场模式"}</span>
+        {pointId ? (
+          <div>
+            <p className="eyebrow">{point ? `${point.hazard_name} · ${point.structure_name}` : "监测点复测"}</p>
+            <h1>{captureMode === "baseline" ? "采集基线" : "开始复测"}{point ? `：${point.monitor_point_name}` : ""}</h1>
+            <p>{point?.location_description ?? point?.monitor_point_id ?? pointId}</p>
+          </div>
+        ) : (
+          <div><p className="eyebrow">现场全景 → 裂缝近景</p><h1>{isDemo ? "选择一个现场案例" : "拍摄本次裂缝近景"}</h1><p>Golden Path 默认：墙体裂缝复测 + 疑似新增水迹</p></div>
+        )}
+        <span className="demo-mode-label">{pointId ? (captureMode === "baseline" ? "基线采集" : "复测采集") : isDemo ? "V0.4 Demo" : "现场模式"}</span>
       </div>
 
-      {isDemo ? <div className="case-selector" aria-label="五个演示案例">{cases.map((item) => <button type="button" className={item.case_id === selectedCaseId ? "active" : ""} key={item.case_id} onClick={() => void chooseCase(item.case_id)}><span>{item.case_id.replace("case_", "")}</span><strong>{item.title}</strong></button>)}</div> : null}
+      {isDemo && !pointId ? <div className="case-selector" aria-label="五个演示案例">{cases.map((item) => <button type="button" className={item.case_id === selectedCaseId ? "active" : ""} key={item.case_id} onClick={() => void chooseCase(item.case_id)}><span>{item.case_id.replace("case_", "")}</span><strong>{item.title}</strong></button>)}</div> : null}
 
       {selectedCase ? <section className="case-visuals">
         <figure className="context-panel"><img src={selectedCase.assets.context} alt="本次巡查现场全景" /><figcaption>现场全景</figcaption>{selectedCase.context_callouts.map((item) => <span className="site-callout compact" key={item.id} style={{ left: `${item.x * 100}%`, top: `${item.y * 100}%` }}><b>{item.id}</b>{item.label}</span>)}</figure>
