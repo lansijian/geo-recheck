@@ -48,6 +48,8 @@ GeoRecheck 是一个 Windows 本地 Demo：基层监测员拍摄现场全景与�
 
 ## 本地运行
 
+macOS 启动与验证说明见 [docs/MACOS.md](docs/MACOS.md)。
+
 Windows 10/11、Node.js 20+、Python 3.11+：
 
 ```bat
