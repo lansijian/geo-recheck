@@ -109,12 +109,12 @@ export async function getAIStatus(): Promise<AIStatus> {
   return parseResponse<AIStatus>(await fetch("/api/ai/status"));
 }
 
-export async function runAIReview(id: string, caseId: string): Promise<AIReview> {
+export async function runAIReview(id: string, caseId?: string): Promise<AIReview> {
   return parseResponse<AIReview>(
     await fetch(`/api/inspections/${id}/ai-review`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ case_id: caseId }),
+      body: JSON.stringify(caseId ? { case_id: caseId } : {}),
     }),
   );
 }

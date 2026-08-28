@@ -56,10 +56,11 @@ export default function ResultPage() {
   }, [id]);
 
   async function triggerAIReview(measurement = result) {
-    if (!measurement?.demo_case_id) return;
+    if (!measurement) return;
+    if (!measurement.demo_case_id && measurement.capture_mode !== "recheck") return;
     setAIBusy(true);
     setError("");
-    try { setAIReview(await runAIReview(measurement.id, measurement.demo_case_id)); }
+    try { setAIReview(await runAIReview(measurement.id, measurement.demo_case_id ?? undefined)); }
     catch (reason) { setError(reason instanceof Error ? reason.message : "AI 现场复核请求失败"); }
     finally { setAIBusy(false); }
   }
@@ -106,6 +107,8 @@ export default function ResultPage() {
   const perPeriod = result.opening_delta_mm;
   const perPeriodText = perPeriod == null ? "—" : `${perPeriod >= 0 ? "+" : ""}${perPeriod.toFixed(1)} mm`;
   const caseBase = result.demo_case_id ? `/demo-cases/${result.demo_case_id}` : null;
+  const canRunAIReview = Boolean(result.demo_case_id) || result.capture_mode === "recheck";
+  const contextEvidenceSrc = caseBase ? `${caseBase}/context.jpg` : result.context_photo_path;
   const pendingCount = aiReview?.items.filter((item) => item.human_status === "pending").length ?? 0;
 
   return (
@@ -163,13 +166,13 @@ export default function ResultPage() {
             </article>)}
             <button className="button text" type="button" onClick={() => void triggerAIReview()}>重新运行 AI 复核</button>
           </div> : null}
-          {!aiBusy && !aiReview && aiStatus?.enabled && aiStatus.configured ? <button className="button" type="button" onClick={() => void triggerAIReview()}>运行 AI 现场复核</button> : null}
+          {!aiBusy && !aiReview && aiStatus?.enabled && aiStatus.configured && canRunAIReview ? <button className="button" type="button" onClick={() => void triggerAIReview()}>运行 AI 现场复核</button> : null}
           <p className="ai-boundary">AI 只提供可见变化提示；不估算毫米、不判断风险，所有条目由监测员决定是否写入记录。</p>
         </section>
       </div>
 
       <section className="three-image-evidence" aria-label="AI 三图输入与几何证据">
-        {caseBase ? <LoadedEvidence src={`${caseBase}/context.jpg`} alt="AI 输入的现场全景" label="图1 · 本次现场全景" onOpen={setPreviewImage} /> : null}
+        <LoadedEvidence src={contextEvidenceSrc} alt="AI 输入的现场全景" label="图1 · 本次现场全景" onOpen={setPreviewImage} />
         <LoadedEvidence src={caseBase ? `${caseBase}/previous_close.jpg` : result.previous_evidence?.original} alt="AI 输入的上次裂缝近景" label="图2 · 上次裂缝近景" onOpen={setPreviewImage} />
         <LoadedEvidence src={result.evidence.original} alt="AI 输入的本次裂缝近景" label="图3 · 本次裂缝近景" onOpen={setPreviewImage} />
       </section>
