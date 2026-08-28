@@ -291,6 +291,8 @@ figcaption span { color: var(--muted); font-size: 11px; font-weight: 400; }
 .ai-review-card header > span { color: var(--muted); font: 11px ui-monospace, monospace; }
 .ai-loading, .ai-unavailable { min-height: 180px; padding: 28px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: #f7f8f5; }
 .ai-loading .spinner { border-color: #c9d6cf; border-top-color: var(--green); }
+.ai-loading strong { margin-top: 10px; color: var(--green); }
+.ai-loading small { max-width: 520px; margin-top: 6px; color: var(--muted); line-height: 1.6; }
 .ai-unavailable p { color: var(--muted); }
 .finding { padding: 16px 0; border-bottom: 1px solid #e7ebe7; }
 .finding > div:first-child { display: grid; grid-template-columns: 30px 1fr; gap: 8px; }

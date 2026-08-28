@@ -110,13 +110,25 @@ export async function getAIStatus(): Promise<AIStatus> {
 }
 
 export async function runAIReview(id: string, caseId?: string): Promise<AIReview> {
-  return parseResponse<AIReview>(
-    await fetch(`/api/inspections/${id}/ai-review`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(caseId ? { case_id: caseId } : {}),
-    }),
-  );
+  const controller = new AbortController();
+  const timeout = globalThis.setTimeout(() => controller.abort(), 190_000);
+  try {
+    return await parseResponse<AIReview>(
+      await fetch(`/api/inspections/${id}/ai-review`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(caseId ? { case_id: caseId } : {}),
+        signal: controller.signal,
+      }),
+    );
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("AI 复核已等待超过 190 秒，请稍后重新运行；几何结果不受影响。");
+    }
+    throw error;
+  } finally {
+    globalThis.clearTimeout(timeout);
+  }
 }
 
 export async function decideAIReviewItem(

@@ -21,7 +21,7 @@ test("连续 10 次一分钟 Golden Path 均完成相对张开、确认和记录
   for (let run = 1; run <= 10; run += 1) {
     resetDemo();
     await page.goto("/");
-    await page.getByRole("link", { name: "开始 60 秒巡查 Demo" }).click();
+    await page.getByRole("link", { name: "直接进入技术操作页" }).click();
     const responsePromise = page.waitForResponse((response) => response.url().includes("/api/measure") && response.request().method() === "POST");
     await page.getByRole("button", { name: "开始分析" }).click();
     expect((await responsePromise).status(), `run ${run} measure response`).toBe(200);

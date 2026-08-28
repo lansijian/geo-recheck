@@ -193,8 +193,8 @@ export default function CapturePage() {
 
       {selectedCase ? <section className="case-visuals">
         <figure className="context-panel"><img src={selectedCase.assets.context} alt="本次巡查现场全景" /><figcaption>现场全景</figcaption>{selectedCase.context_callouts.map((item) => <span className="site-callout compact" key={item.id} style={{ left: `${item.x * 100}%`, top: `${item.y * 100}%` }}><b>{item.id}</b>{item.label}</span>)}</figure>
-        <figure><img src={selectedCase.assets.previous_close} alt="上次裂缝近景" /><figcaption>上次近景</figcaption></figure>
-        <figure><img src={selectedCase.assets.current_close} alt="本次裂缝近景" /><figcaption>本次近景</figcaption></figure>
+        <figure><img src={selectedCase.assets.previous_close} alt="上次裂缝近景" /><figcaption>上次近景 · 基线机位</figcaption></figure>
+        <figure><img src={selectedCase.assets.current_close} alt="本次裂缝近景" /><figcaption>本次近景 · 不同拍摄角度</figcaption></figure>
       </section> : null}
 
       <div className="capture-primary-actions" aria-label="照片来源">

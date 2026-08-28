@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,7 @@ from app.services.stepfun_observer import StepFunReviewError, run_field_review
 
 
 DECISION_STATES = {"accepted", "rejected", "edited"}
+LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -65,6 +67,24 @@ def resolve_review_images(
 
 
 def latest_ai_review(session: Session, inspection_id: str) -> AIReview | None:
+    stale_before = datetime.utcnow() - timedelta(
+        seconds=max(config.STEPFUN_TIMEOUT_SECONDS + 15, 195)
+    )
+    stale_reviews = session.scalars(
+        select(AIReview).where(
+            AIReview.inspection_id == inspection_id,
+            AIReview.status == "running",
+            AIReview.created_at < stale_before,
+        )
+    ).all()
+    if stale_reviews:
+        for stale_review in stale_reviews:
+            stale_review.status = "failed"
+            stale_review.error_code = "interrupted"
+            stale_review.error_message = (
+                "AI 复核在服务中断后未完成，请重新运行。"
+            )
+        session.commit()
     return session.scalar(
         select(AIReview)
         .where(AIReview.inspection_id == inspection_id)
@@ -145,6 +165,13 @@ def run_and_persist_ai_review(
         review.status = "failed"
         review.error_code = error.code
         review.error_message = str(error)
+        session.commit()
+        return ai_review_to_dict(session, review)
+    except Exception:
+        LOGGER.exception("Unexpected StepFun field-review failure")
+        review.status = "failed"
+        review.error_code = "internal_error"
+        review.error_message = "AI 复核发生内部异常，请重新运行。"
         session.commit()
         return ai_review_to_dict(session, review)
 

@@ -32,7 +32,8 @@
     "selection_score": 5.33544
   },
   "synthetic_changes": [
-    "opening_delta_5mm"
+    "opening_delta_5mm",
+    "viewpoint_yaw_-8_pitch_+8_deg"
   ],
   "expected_geometry": {
     "opening_delta_mm": 5.0,
@@ -42,6 +43,17 @@
   "expected_ai_observations": [
     "none"
   ],
+  "capture_viewpoints": {
+    "previous": {
+      "yaw_deg": 0.0,
+      "pitch_deg": 0.0
+    },
+    "current": {
+      "yaw_deg": -8.0,
+      "pitch_deg": 8.0
+    },
+    "different_viewpoints_required": true
+  },
   "context_callouts": [
     {
       "id": "01",
@@ -115,26 +127,26 @@
     "shear_delta_mm": 0.5,
     "ground_truth_mm": 165.0,
     "legacy_ground_truth_board_distance_mm": 165.0,
-    "yaw_deg": 0.0,
-    "pitch_deg": 0.0,
+    "yaw_deg": -8.0,
+    "pitch_deg": 8.0,
     "brightness": 1.0,
     "blur_sigma": 0.0,
     "occlusion": "none",
     "expected_gate": "accepted",
     "camera_homography": [
       [
-        0.8337502300649836,
-        -1.3388109326932937e-17,
-        126.66666412353516
+        1.0252361292434684,
+        0.08470230011773651,
+        19.08449363708496
       ],
       [
-        1.421796369705053e-19,
-        0.8340283569641367,
-        40.0
+        0.028752579318363315,
+        0.989345252826196,
+        -6.145463466644287
       ],
       [
-        3.554490924262632e-21,
-        -1.0667029755626228e-19,
+        8.734370538726792e-05,
+        8.823156658304226e-05,
         1.0
       ]
     ],

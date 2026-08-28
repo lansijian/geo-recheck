@@ -33,6 +33,7 @@
   },
   "synthetic_changes": [
     "opening_delta_4.8mm",
+    "viewpoint_yaw_-12_pitch_+8_deg",
     "controlled_water_stain"
   ],
   "expected_geometry": {
@@ -43,6 +44,17 @@
   "expected_ai_observations": [
     "seepage_or_water_stain"
   ],
+  "capture_viewpoints": {
+    "previous": {
+      "yaw_deg": 0.0,
+      "pitch_deg": 0.0
+    },
+    "current": {
+      "yaw_deg": -12.0,
+      "pitch_deg": 8.0
+    },
+    "different_viewpoints_required": true
+  },
   "context_callouts": [
     {
       "id": "01",
@@ -116,26 +128,26 @@
     "shear_delta_mm": 0.5,
     "ground_truth_mm": 164.8,
     "legacy_ground_truth_board_distance_mm": 164.8,
-    "yaw_deg": 0.0,
-    "pitch_deg": 0.0,
+    "yaw_deg": -12.0,
+    "pitch_deg": 8.0,
     "brightness": 1.0,
     "blur_sigma": 0.0,
     "occlusion": "none",
     "expected_gate": "accepted",
     "camera_homography": [
       [
-        0.8337502300649836,
-        -1.3388109326932937e-17,
-        126.66666412353516
+        1.1026734043253363,
+        0.08851907891509074,
+        -11.278826713562012
       ],
       [
-        1.421796369705053e-19,
-        0.8340283569641367,
-        40.0
+        0.0448892288368179,
+        1.0339263271919568,
+        -21.2559871673584
       ],
       [
-        3.554490924262632e-21,
-        -1.0667029755626228e-19,
+        0.0001363632004866657,
+        9.220741337327736e-05,
         1.0
       ]
     ],

@@ -4,11 +4,33 @@
 
 A local proof-of-concept for visual crack re-measurement and inspection record generation in grassroots geohazard monitoring.
 
-当前版本：V0.4 hackathon demo。几何算法负责“量”，阶跃多模态负责“看”，监测员负责“确认”。
+当前版本：V0.5 Showcase Mode。几何算法负责“量”，阶跃多模态负责“看”，监测员负责“确认”，GeoReCheck 负责把证据留在同一条记录里。
 
 GeoRecheck 是一个 Windows 本地 Demo：基层监测员拍摄现场全景与裂缝近景后，系统先用确定性视觉几何计算相对张开，再用 StepFun 多模态模型辅助比较可见水迹、表面剥落、复测标志与图像覆盖，最后由监测员逐条确认并生成巡查记录。
 
 它不预测滑坡，不判断是否安全，不输出风险等级、预警或撤离建议，也不替代人工巡查和专业监测设备。
+
+## V0.5 比赛展示模式
+
+打开 `/showcase` 可进入三栏大屏：左侧是基层巡查 2.5D 现场，中间是巡查员手机操作，右侧同步解释每一步的职责与边界。默认展示 `case_03_seepage`，也可切换剥落和图片质量失败故事，支持自动演示、暂停、上一步、下一步与重置。
+
+```bat
+一键启动前后端.cmd
+```
+
+该脚本固定使用 `D:\Anaconda\_envs\PulseWeave\Scripts\python.exe`，等待前后端就绪后用 Google Chrome 自动打开 <http://127.0.0.1:5173/showcase>。这样可以避开联想浏览器对本地页面注入隐藏扩展脚本造成的控制台噪声。
+
+- **展示模式（默认）**：只读取仓库内置、已经验证的本地案例和结果，不请求外部 AI，适合现场稳定演示；
+- **实时模式（可选）**：真实调用本机 FastAPI；StepFun 是否运行取决于 `.env.local` 和网络，失败时仍保留 OpenCV 几何结果；
+- 两种模式在页面顶端、手机上方和说明条中持续明确标注，不用缓存结果冒充实时调用。
+
+![V0.5 展示首页](docs/assets/v05-showcase-home.png)
+
+| 展示进行中 | 自动留痕 |
+|---|---|
+| ![V0.5 展示进行中](docs/assets/v05-showcase-in-action.png) | ![V0.5 展示记录](docs/assets/v05-showcase-record.png) |
+
+完整展示说明见 [`docs/V0_5_SHOWCASE_MODE.md`](docs/V0_5_SHOWCASE_MODE.md)。
 
 ## 60 秒主链路
 
@@ -33,7 +55,7 @@ GeoRecheck 是一个 Windows 本地 Demo：基层监测员拍摄现场全景与�
 |---|---|
 | ![V0.4 结果页](docs/assets/v04-result.png) | ![V0.4 记录页](docs/assets/v04-record.png) |
 
-## V0.4 已实现
+## V0.5 已实现
 
 - 保留 V0.3 的 React/TypeScript/Vite、FastAPI、AprilTag、metric rectification、相对变形、质量门控、证据、SQLite 与人工确认；
 - 5 个有明确来源和受控变化说明的 Demo Cases：稳定、张开、水迹、剥落、质量失败；
@@ -43,6 +65,9 @@ GeoRecheck 是一个 Windows 本地 Demo：基层监测员拍摄现场全景与�
 - AI timeout、network、quota、model unavailable 均不会阻塞几何结果；
 - AI 条目状态 `pending / accepted / rejected / edited`，正式记录只写入人工接受或编辑项；
 - 结果刷新后从 SQLite 恢复最新 AI 复核与人工处置状态。
+- `/showcase` 三栏比赛展示页、8 步故事时间线、自动/手动播放控制；
+- 三个故事的一键切换，以及展示模式与实时模式的严格披露；
+- 演示案例的上次/本次近景使用不同拍摄角度，仍由复测标志和透视校正完成几何复测。
 
 默认模型通过环境变量配置，本地当前验证使用 `step-3.7-flash`，代码没有硬编码为唯一模型。
 
@@ -61,7 +86,7 @@ scripts\run_dev.cmd
 
 `setup_windows.cmd` 默认在项目目录创建 `.venv`。如需使用已有 Python 环境，可先将 `GEORECHECK_PYTHON` 设置为该环境的 `python.exe`，脚本不会依赖特定盘符或用户名。
 
-打开 <http://127.0.0.1:5173>。
+打开 <http://127.0.0.1:5173/showcase>。如需原 V0.4 技术操作页，打开 <http://127.0.0.1:5173/capture?demo=1&case=case_03_seepage>。
 
 StepFun 仅从被 Git 忽略的 `.env.local` 读取密钥：
 
