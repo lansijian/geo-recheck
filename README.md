@@ -1,6 +1,10 @@
-# GeoRecheck · 地灾复测 V0.4
+# GeoRecheck · 地灾复测
 
-> 几何算法负责“量”，阶跃多模态负责“看”，监测员负责“确认”。
+> 面向基层地灾巡查的视觉复测与自动留痕 PoC
+
+A local proof-of-concept for visual crack re-measurement and inspection record generation in grassroots geohazard monitoring.
+
+当前版本：V0.4 hackathon demo。几何算法负责“量”，阶跃多模态负责“看”，监测员负责“确认”。
 
 GeoRecheck 是一个 Windows 本地 Demo：基层监测员拍摄现场全景与裂缝近景后，系统先用确定性视觉几何计算相对张开，再用 StepFun 多模态模型辅助比较可见水迹、表面剥落、复测标志与图像覆盖，最后由监测员逐条确认并生成巡查记录。
 
@@ -23,7 +27,7 @@ GeoRecheck 是一个 Windows 本地 Demo：基层监测员拍摄现场全景与�
              巡查记录
 ```
 
-![V0.4 真实工作首页](docs/assets/v04-home.png)
+![V0.4 工作流首页](docs/assets/v04-home.png)
 
 | 几何结果与 AI 失败隔离 | 人工确认后的记录 |
 |---|---|
@@ -44,12 +48,16 @@ GeoRecheck 是一个 Windows 本地 Demo：基层监测员拍摄现场全景与�
 
 ## 本地运行
 
-Windows 10/11、Node.js 20+。本工作区 Python 固定使用：
+Windows 10/11、Node.js 20+、Python 3.11+：
 
 ```bat
-set GEORECHECK_PYTHON=D:\Anaconda\_envs\PulseWeave\Scripts\python.exe
+git clone https://github.com/lansijian/geo-recheck.git
+cd geo-recheck
+scripts\setup_windows.cmd
 scripts\run_dev.cmd
 ```
+
+`setup_windows.cmd` 默认在项目目录创建 `.venv`。如需使用已有 Python 环境，可先将 `GEORECHECK_PYTHON` 设置为该环境的 `python.exe`，脚本不会依赖特定盘符或用户名。
 
 打开 <http://127.0.0.1:5173>。
 
@@ -73,27 +81,29 @@ STEPFUN_AI_REVIEW_ENABLED=false
 ## 验证
 
 ```bat
-D:\Anaconda\_envs\PulseWeave\Scripts\python.exe -m pytest -q
+set GEORECHECK_PYTHON=.venv\Scripts\python.exe
+%GEORECHECK_PYTHON% -m pytest -q
 npm run typecheck --prefix frontend
 npm run build --prefix frontend
-set GEORECHECK_PYTHON=D:\Anaconda\_envs\PulseWeave\Scripts\python.exe
 npm run e2e --prefix frontend
 ```
 
 真实 StepFun 三图 smoke test 只在显式配置密钥后执行：
 
 ```bat
-D:\Anaconda\_envs\PulseWeave\Scripts\python.exe scripts\test_stepfun_vision.py
+%GEORECHECK_PYTHON% scripts\test_stepfun_vision.py
 ```
 
 脚本会把可审计结果写入 `artifacts/stepfun_v04/live_smoke.json`。配额、网络或模型失败会明确标记为失败，不会用 fixture 冒充真实成功。离线 pytest 使用 `backend/tests/fixtures/stepfun_response.json` 验证解析、Pydantic、人工处置和记录生成。
 
 V0.3 的受控几何验证结果仍保留在 `artifacts/validation_v03/`；这些数值只代表合成实验，不代表野外精度。
 
-## 数据与来源边界
+## Data & Attribution / 数据与来源边界
 
 - `REAL STORY`：人民网贵州公开报道中的基层监测员岗位与工作动作；
-- `OPEN IMAGE`：Mendeley CC BY 4.0 墙体裂缝图像与 Pixnio CC0 建筑立面；
+- `PUBLIC DATA`：Özgenel Concrete Crack Segmentation Dataset（[Mendeley Data](https://data.mendeley.com/datasets/jwsn7tfbrp/1)，CC BY 4.0）仅用于生成受控墙体裂缝演示场景，原始 745 MB 数据集不在仓库中分发；
+- `LEGACY PUBLIC DATA`：[CrackForest](https://github.com/cuilimeng/CrackForest-dataset) 仅用于旧版回归实验，完整数据集不在仓库中分发；
+- `OPEN IMAGE`：另有 12 张 Mendeley CC BY 4.0 墙体场景图像与 1 张 Pixnio CC0 建筑立面图；
 - `SYNTHETIC`：复测贴、首次开度、张开/剪切、水迹、剥落、模糊与 Demo 毫米结果；
 - `NOT REAL GUIZHOU DATA`：所有案例均不是贵州真实事故或生产监测记录。
 
@@ -106,6 +116,10 @@ V0.3 的受控几何验证结果仍保留在 `artifacts/validation_v03/`；这�
 - 真实相机标定后的 0/2/5/10 mm 物理位移实验；
 - 室外光照、距离、角度与长期贴装测试；
 - 真实基层监测员 shadow mode。
+
+## Safety & Scope
+
+GeoRecheck does not provide geohazard risk assessment, warning, evacuation decisions or safety guarantees. All measurements must be reviewed by trained personnel. 本项目不能替代专业自动化监测设备、基层监测员或正式安全决策流程。
 
 ## License
 

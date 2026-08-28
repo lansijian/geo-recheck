@@ -60,6 +60,13 @@ test("StepFun 不可用时几何结果仍可确认并生成记录", async ({ pag
 
 test("AI 可见变化可由监测员逐条确认或不采纳", async ({ page }) => {
   const statuses: Record<number, "pending" | "accepted" | "rejected"> = { 7001: "pending", 7002: "pending" };
+  await page.route("**/api/ai/status", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ enabled: true, configured: true, provider: "stepfun", model: "step-3.7-flash" }),
+    });
+  });
   const reviewPayload = () => ({
     id: "fixture-review",
     inspection_id: "browser-fixture",

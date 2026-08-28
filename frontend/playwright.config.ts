@@ -16,7 +16,9 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: "..\\scripts\\run_dev.cmd",
+    // Keep browser regression deterministic and prevent a developer's local
+    // StepFun credentials from triggering live requests during database resets.
+    command: "set STEPFUN_AI_REVIEW_ENABLED=false&& ..\\scripts\\run_dev.cmd",
     url: "http://127.0.0.1:5173",
     reuseExistingServer: true,
     timeout: 30_000,
