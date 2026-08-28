@@ -287,13 +287,15 @@ def build_canonical_wall_plane(
     occlusion: str,
     scene_index: int = 0,
     surface_change: str = "none",
+    boards: tuple[BoardSpec, BoardSpec] = (DEMO_LEFT, DEMO_RIGHT),
 ) -> tuple[np.ndarray, dict]:
+    left_board, right_board = boards
     wall, mask, source = load_wall_source(dataset_root, seed, scene_index)
     split_x = _crack_center_x(mask)
     center_y = wall.shape[0] // 2
     half_separation_px = int(round(BASELINE_BOARD_SEPARATION_MM * SYNTHETIC_PIXELS_PER_MM / 2))
-    _paste_texture(wall, make_board_texture(DEMO_LEFT, SYNTHETIC_PIXELS_PER_MM), (split_x - half_separation_px, center_y))
-    _paste_texture(wall, make_board_texture(DEMO_RIGHT, SYNTHETIC_PIXELS_PER_MM), (split_x + half_separation_px, center_y))
+    _paste_texture(wall, make_board_texture(left_board, SYNTHETIC_PIXELS_PER_MM), (split_x - half_separation_px, center_y))
+    _paste_texture(wall, make_board_texture(right_board, SYNTHETIC_PIXELS_PER_MM), (split_x + half_separation_px, center_y))
     plane, moved_mask = _apply_controlled_deformation(wall, mask, opening_delta_mm, shear_delta_mm)
     _render_crack(plane, moved_mask, BASELINE_CRACK_WIDTH_MM + max(0.0, opening_delta_mm))
     _apply_surface_change(plane, surface_change, seed)
@@ -338,6 +340,7 @@ def render_case(
     baseline_mm: float = BASELINE_BOARD_SEPARATION_MM,
     dataset_root: Path | None = None,
     seed: int = 7,
+    boards: tuple[BoardSpec, BoardSpec] = (DEMO_LEFT, DEMO_RIGHT),
 ) -> tuple[np.ndarray, dict]:
     del baseline_mm
     plane, physical = build_canonical_wall_plane(
@@ -348,6 +351,7 @@ def render_case(
         case.occlusion,
         case.scene_index,
         case.surface_change,
+        boards,
     )
     homography = _camera_homography(case.yaw_deg, case.pitch_deg)
     output = np.full((IMAGE_SIZE[1], IMAGE_SIZE[0], 3), (224, 226, 222), np.uint8)

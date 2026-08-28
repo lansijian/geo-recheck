@@ -48,10 +48,3 @@ class BoardSpec:
 
 DEMO_LEFT = BoardSpec("LEFT", (301, 302, 303, 304))
 DEMO_RIGHT = BoardSpec("RIGHT", (305, 306, 307, 308))
-
-
-def board_for_marker(marker_id: int) -> BoardSpec | None:
-    for board in (DEMO_LEFT, DEMO_RIGHT):
-        if marker_id in board.marker_ids:
-            return board
-    return None

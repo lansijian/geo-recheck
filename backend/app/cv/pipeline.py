@@ -6,7 +6,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from .board_geometry import DEMO_LEFT, DEMO_RIGHT
+from .board_geometry import DEMO_LEFT, DEMO_RIGHT, BoardSpec
 from .image_io import write_image
 from .marker_detector import DEFAULT_DETECTOR
 from .planar_measurement import measure_planar_relative
@@ -48,20 +48,32 @@ def _pose_dict(pose) -> dict | None:
     }
 
 
+def scan_marker_ids(
+    image: np.ndarray, camera_matrix: np.ndarray, distortion: np.ndarray
+) -> list[int]:
+    """Cheap identity pass: which tags are in frame, before boards are known."""
+    undistorted = cv2.undistort(image, camera_matrix, distortion)
+    return DEFAULT_DETECTOR.detect(undistorted).ids
+
+
 def measure_image(
     image: np.ndarray,
     camera_matrix: np.ndarray,
     distortion: np.ndarray,
     output_dir: Path | None = None,
+    left: BoardSpec = DEMO_LEFT,
+    right: BoardSpec = DEMO_RIGHT,
 ) -> MeasurementResult:
     undistorted = cv2.undistort(image, camera_matrix, distortion)
     detection = DEFAULT_DETECTOR.detect(undistorted)
-    left = estimate_board_pose(DEMO_LEFT, detection.corners_by_id, camera_matrix, distortion)
-    right = estimate_board_pose(DEMO_RIGHT, detection.corners_by_id, camera_matrix, distortion)
-    quality = assess_quality(undistorted, detection.corners_by_id, left, right)
+    left_pose = estimate_board_pose(left, detection.corners_by_id, camera_matrix, distortion)
+    right_pose = estimate_board_pose(right, detection.corners_by_id, camera_matrix, distortion)
+    quality = assess_quality(undistorted, detection.corners_by_id, left_pose, right_pose)
     planar = measure_planar_relative(
         detection.corners_by_id,
-        left_pose=left,
+        left=left,
+        right=right,
+        left_pose=left_pose,
         camera_matrix=camera_matrix,
     )
     if quality.accepted and planar is None:
@@ -70,8 +82,8 @@ def measure_image(
     elif planar and (planar.homography_rmse_mm > 0.8 or planar.right_point_spread_mm > 1.5):
         quality.accepted = False
         quality.reasons.append("墙面几何对齐不稳定，请重新拍摄。")
-    distance = relative_distance_mm(left, right) if quality.accepted and left and right else None
-    dual_pnp = relative_transform_mm(left, right) if quality.accepted and left and right else None
+    distance = relative_distance_mm(left_pose, right_pose) if quality.accepted and left_pose and right_pose else None
+    dual_pnp = relative_transform_mm(left_pose, right_pose) if quality.accepted and left_pose and right_pose else None
 
     if output_dir:
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -80,12 +92,12 @@ def measure_image(
             corners = [value.reshape(1, 4, 2) for value in detection.corners_by_id.values()]
             ids = np.asarray(list(detection.corners_by_id), dtype=np.int32).reshape(-1, 1)
             cv2.aruco.drawDetectedMarkers(overlay, corners, ids)
-        if left and right:
+        if left_pose and right_pose:
             left_center = tuple(np.round(np.mean([detection.corners_by_id[i] for i in left.marker_ids], axis=(0, 1))).astype(int))
             right_center = tuple(np.round(np.mean([detection.corners_by_id[i] for i in right.marker_ids], axis=(0, 1))).astype(int))
             cv2.line(overlay, left_center, right_center, (27, 137, 95), 3)
-        left_rect = rectify_board(undistorted, DEMO_LEFT, detection.corners_by_id)
-        right_rect = rectify_board(undistorted, DEMO_RIGHT, detection.corners_by_id)
+        left_rect = rectify_board(undistorted, left, detection.corners_by_id)
+        right_rect = rectify_board(undistorted, right, detection.corners_by_id)
         write_image(output_dir / "original.png", image)
         write_image(output_dir / "undistorted.png", undistorted)
         write_image(output_dir / "overlay.png", overlay)
@@ -106,8 +118,8 @@ def measure_image(
         marker_ids=detection.ids,
         distance_mm=distance,
         quality=quality,
-        left_pose=_pose_dict(left),
-        right_pose=_pose_dict(right),
+        left_pose=_pose_dict(left_pose),
+        right_pose=_pose_dict(right_pose),
         planar_position_mm=(planar.right_center_mm.tolist() if quality.accepted and planar else None),
         dual_pnp_position_mm=dual_pnp.tolist() if dual_pnp is not None else None,
         homography_rmse_mm=planar.homography_rmse_mm if planar else None,
