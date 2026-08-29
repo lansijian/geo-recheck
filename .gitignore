@@ -18,7 +18,6 @@ data/images/
 data/*.db
 artifacts/browser/
 artifacts/markers/
-artifacts/calibration/
 artifacts/validation/evidence/
 artifacts/validation_v03/evidence/
 artifacts/validation_v04_cases/evidence/

@@ -1,0 +1,8 @@
+{
+  "name": "geo-recheck",
+  "private": true,
+  "version": "0.6.0",
+  "scripts": {
+    "build": "npm --prefix frontend run build"
+  }
+}
