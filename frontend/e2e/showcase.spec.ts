@@ -43,12 +43,27 @@ test("V0.6 使用真实 Three.js Canvas 和统一三栏现场", async ({ page })
   await expect(page.getByTestId("showcase-scene")).toBeVisible();
   await expect(page.getByTestId("showcase-phone")).toBeVisible();
   await expect(page.getByTestId("showcase-sidebar")).toBeVisible();
+  await expect(page.getByTestId("judge-start")).toHaveText("一键开始体验");
   const canvas = page.getByTestId("field-canvas").locator("canvas");
   await expect(canvas).toBeVisible();
   expect(await canvas.evaluate((node: HTMLCanvasElement) => Boolean(node.getContext("webgl2") || node.getContext("webgl")))).toBe(true);
-  await expect(page.getByText(/几何真实调用本机 FastAPI/)).toBeVisible();
+  await expect(page.getByTestId("showcase-runtime").getByText("FastAPI / OpenCV", { exact: false })).toBeVisible();
   expect(externalRequests).toEqual([]);
   expect(failures).toEqual([]);
+});
+
+test("评委首屏能看懂并一键开始，也能直接点击手机", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/showcase?speed=fast");
+  await expect(page.getByText("评委从这里开始", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("showcase-runtime").getByText("LIVE", { exact: true }).first()).toBeVisible();
+  await expect(page.getByTestId("showcase-runtime").getByText("REPLAY", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("showcase-phone").getByRole("button", { name: "开始巡查" })).toBeInViewport();
+  await page.getByTestId("judge-start").click();
+  await expect(page.getByTestId("judge-start")).toHaveText("暂停体验");
+  await expect(page.getByText("自动体验运行中", { exact: true })).toBeVisible();
+  await page.getByTestId("judge-start").click();
+  await expect(page.getByTestId("judge-start")).toHaveText("继续自动体验");
 });
 
 test("人物与摄像机目标在巡查过程中发生真实空间切换", async ({ page }) => {
@@ -83,9 +98,13 @@ test("自动巡查在人工确认处强制暂停且用户输入进入正式记�
   test.setTimeout(45_000);
   await page.goto("/showcase?speed=fast");
   await page.getByTestId("showcase-autoplay").click();
-  await expect(page.getByText("等待人工确认", { exact: true }).first()).toBeVisible({ timeout: 25_000 });
+  await expect(page.getByText("自动演示已暂停 · 轮到你操作", { exact: true })).toBeVisible({ timeout: 25_000 });
   await expect(page.getByTestId("showcase-autoplay")).toHaveText("自动巡查");
+  await expect(page.getByTestId("judge-start")).toHaveText("去手机完成确认");
   await expect(page.getByRole("button", { name: "确认", exact: true })).not.toHaveClass(/selected/);
+  await page.getByRole("button", { name: "一键填入演示信息" }).click();
+  await expect(page.getByLabel("监测员姓名")).toHaveValue("路演评委");
+  await expect(page.getByLabel("现场备注")).toHaveValue("现场已核对照片与可见变化，复测贴完整。");
   await page.getByLabel("监测员姓名").fill("王复测");
   await page.getByLabel("现场备注").fill("现场核对水迹区域，墙面复测贴完整。");
   await page.getByRole("button", { name: "确认", exact: true }).click();

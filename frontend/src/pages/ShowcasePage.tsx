@@ -41,6 +41,9 @@ export default function ShowcasePage() {
   const activeCase = useMemo(() => cases.find((item) => item.case_id === activeCaseId) ?? cases[0], [activeCaseId, cases]);
   const step = FIELD_STEPS[stepIndex];
   const publicPhaseIndex = PUBLIC_PHASES.findIndex((phase) => phase.id === step.publicPhase);
+  const isHumanTurn = step.id === "human_confirm";
+  const isFinished = step.id === "record";
+  const runtimeLabel = playing ? "自动体验运行中" : isHumanTurn ? "轮到评委操作" : isFinished ? "体验完成" : stepIndex === 0 ? "等待开始" : "已暂停，可继续";
 
   useEffect(() => {
     void getShowcaseCases().then((items) => setCases(items.filter((item) => EXHIBITION_CASES.has(item.case_id)))).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Showcase 数据加载失败。"));
@@ -66,7 +69,7 @@ export default function ShowcasePage() {
   const runGeometry = useCallback(async () => {
     if (!activeCase || geometryRun.current === activeCase.case_id) return;
     geometryRun.current = activeCase.case_id;
-    setGeometryState("running"); setProcessMessage("正在将墙面近景送入本机 FastAPI / OpenCV…");
+    setGeometryState("running"); setProcessMessage("正在将墙面近景送入 FastAPI / OpenCV 实时接口…");
     try {
       const response = await fetch(activeCase.assets.current_close);
       if (!response.ok) throw new Error("无法读取 Canonical Field Scene 的裂缝证据纹理。");
@@ -148,16 +151,35 @@ export default function ShowcasePage() {
 
   function handlePrimary() { if (step.id === "human_confirm") void finishConfirmation(); else if (step.id === "record") record && navigate(`/record/${record.id}`); else advance(); }
   function startAutoplay() { if (step.id === "record") resetRun(); setPlaying(true); }
+  function focusPhone() { document.getElementById("judge-phone")?.scrollIntoView({ behavior: "smooth", block: "center" }); }
+  function handleJudgeExperience() {
+    if (isHumanTurn) { focusPhone(); return; }
+    if (playing) { setPlaying(false); return; }
+    startAutoplay();
+  }
 
   if (error && !activeCase) return <section className="page"><div className="notice error">{error}</div></section>;
   if (!activeCase) return <section className="page"><div className="empty">正在载入 Field Inspector Simulator…</div></section>;
 
   return (
     <section className="showcase-page v06" data-testid="showcase-page">
-      <header className="showcase-hero"><div><p>GeoReCheck</p><h1>基层地灾巡查辅助工具</h1><span>人走到现场拍照，几何量毫米，AI 补人眼，人来做确认。</span></div><b className="demo-badge">DEMO</b></header>
+      <header className="showcase-hero">
+        <div className="showcase-title"><p>GeoReCheck · LIVE DEMO</p><h1>基层地灾巡查辅助工具</h1><span>人走到现场拍照，几何量毫米，AI 补人眼，人来做确认。</span></div>
+        <div className="judge-launcher" aria-label="评委体验入口">
+          <div><span>评委从这里开始</span><strong>{isHumanTurn ? "请在手机中完成最后确认" : isFinished ? "一条巡查记录已经生成" : "一键运行，约 60 秒到人工确认"}</strong><small>也可以直接点击下方手机里的绿色按钮逐步体验。</small></div>
+          <div className="judge-actions">
+            <button data-testid="judge-start" className="judge-primary" onClick={handleJudgeExperience}>{playing ? "暂停体验" : isHumanTurn ? "去手机完成确认" : isFinished ? "重新体验" : stepIndex === 0 ? "一键开始体验" : "继续自动体验"}</button>
+            <button data-testid="judge-manual" className="judge-secondary" onClick={focusPhone}>亲手点手机</button>
+          </div>
+        </div>
+      </header>
       <div className="showcase-casebar"><div><span>巡查案例</span>{cases.map((item) => <button data-testid={`case-${item.case_id}`} className={item.case_id === activeCaseId ? "active" : ""} key={item.case_id} onClick={() => setActiveCaseId(item.case_id)}><strong>{item.title.replace("墙体裂缝复测 + ", "")}</strong><small>{item.case_id}</small></button>)}</div><div className="showcase-playback"><button onClick={() => { setPlaying(false); setStepIndex((value) => Math.max(0, value - 1)); }} disabled={stepIndex === 0}>上一步</button><button data-testid="showcase-autoplay" className="play" onClick={() => playing ? setPlaying(false) : startAutoplay()}>{playing ? "暂停" : "自动巡查"}</button><button data-testid="showcase-next" onClick={advance} disabled={!canAdvance}>下一步</button><button onClick={resetRun}>重新开始</button></div></div>
       <div className="showcase-progress public-progress">{PUBLIC_PHASES.map((phase, index) => <div key={phase.id} className={index === publicPhaseIndex ? "active" : index < publicPhaseIndex ? "done" : ""}><span>{index < publicPhaseIndex ? "✓" : phase.number}</span><b>{phase.label}</b></div>)}</div>
-      <div className="mode-disclosure"><strong>Hybrid Replay</strong> 几何真实调用本机 FastAPI / OpenCV，记录真实写入 SQLite；AI 内容回放自 2026-08-28 已保存的 StepFun 成功响应。实时 AI 仅在用户主动点击后运行。</div>
+      <div className={`showcase-runtime ${playing ? "running" : isHumanTurn ? "human-turn" : ""}`} role="status" aria-live="polite" data-testid="showcase-runtime">
+        <div className="runtime-current"><i aria-hidden="true" /><span><strong>{runtimeLabel}</strong><b>{step.label}</b><small>{processMessage || step.explanation}</small></span></div>
+        <div className="runtime-proof" aria-label="运行方式"><span><b>LIVE</b> Three.js 现场</span><span><b>LIVE</b> FastAPI / OpenCV</span><span><b className="replay">REPLAY</b> StepFun 实测</span><span><b className="write">WRITE</b> 巡查记录</span></div>
+        <small className="runtime-disclosure">几何实时调用 API；AI 默认回放已审计实测响应，结果页可主动运行实时 StepFun。</small>
+      </div>
       {error ? <div className="notice error showcase-error">{error}</div> : null}
       <div className="showcase-layout">
         <ShowcaseScene activeCase={activeCase} step={step} onCapture={handleCapture} />
