@@ -1,5 +1,9 @@
 # GeoRecheck · 地灾复测
 
+<p align="center">
+  <img src="frontend/public/brand/logo-mark.png" alt="GeoReCheck 地灾复测圆形标志" width="180" />
+</p>
+
 > 面向基层地灾巡查的视觉复测与自动留痕 PoC
 
 A local proof-of-concept for visual crack re-measurement and inspection record generation in grassroots geohazard monitoring.

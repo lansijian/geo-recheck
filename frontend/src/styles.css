@@ -23,7 +23,7 @@ img { max-width: 100%; }
 .app-shell { min-height: 100vh; display: flex; flex-direction: column; }
 .topbar { min-height: 76px; padding: 12px clamp(20px, 4vw, 64px); display: flex; align-items: center; justify-content: space-between; gap: 24px; background: rgba(255,255,255,.98); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 20; }
 .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
-.brand-mark { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 8px; background: var(--green-dark); color: white; font-weight: 800; }
+.brand-mark { width: 50px; height: 50px; flex: 0 0 50px; object-fit: contain; }
 .brand strong, .brand small { display: block; }
 .brand strong { font-size: 18px; }
 .brand small { margin-top: 3px; color: var(--muted); font-size: 11px; }

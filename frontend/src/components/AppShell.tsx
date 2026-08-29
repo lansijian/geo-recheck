@@ -6,7 +6,7 @@ export default function AppShell({ children }: PropsWithChildren) {
     <div className="app-shell">
       <header className="topbar">
         <NavLink className="brand" to="/" aria-label="返回地灾复测首页">
-          <span className="brand-mark" aria-hidden="true">复</span>
+          <img className="brand-mark" src="/brand/logo-mark.png" alt="" aria-hidden="true" />
           <span>
             <strong>地灾复测</strong>
             <small>几何测量 · AI 现场复核 · 人工确认</small>
