@@ -21,11 +21,20 @@ def _load_local_env() -> None:
 
 _load_local_env()
 DATA_ROOT = PROJECT_ROOT / "data"
+IS_VERCEL = bool(os.getenv("VERCEL"))
+RUNTIME_ROOT = Path(
+    os.getenv(
+        "GEORECHECK_RUNTIME_ROOT",
+        "/tmp/geo-recheck" if IS_VERCEL else str(DATA_ROOT),
+    )
+)
+PERSISTENCE_MODE = "serverless-ephemeral" if IS_VERCEL else "local-durable"
 SEED_ROOT = DATA_ROOT / "seed"
-EVIDENCE_ROOT = DATA_ROOT / "images"
+EVIDENCE_ROOT = RUNTIME_ROOT / "images"
 BENCHMARK_ROOT = DATA_ROOT / "benchmark"
-DATABASE_PATH = DATA_ROOT / "geo_recheck.db"
-CAMERA_PROFILE_PATH = DATA_ROOT / "camera_profiles" / "default_camera.json"
+DATABASE_PATH = RUNTIME_ROOT / "geo_recheck.db"
+CAMERA_PROFILE_SOURCE_PATH = DATA_ROOT / "camera_profiles" / "default_camera.json"
+CAMERA_PROFILE_PATH = RUNTIME_ROOT / "camera_profiles" / "default_camera.json"
 DEMO_LOCATION_MODE = os.getenv("DEMO_LOCATION_MODE", "true").lower() == "true"
 DEMO_CASES_ROOT = DATA_ROOT / "demo_cases"
 STEPFUN_API_KEY = os.getenv("STEPFUN_API_KEY", "").strip()

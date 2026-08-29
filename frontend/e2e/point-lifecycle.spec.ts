@@ -80,7 +80,7 @@ test("真实点位完成不同角度基线、复测、AI 人工处置与正式�
   await expect(page).toHaveURL(/\/record\/[0-9a-f-]+$/);
 
   await page.goto(`/points/${pointId}`);
-  await page.getByRole("link", { name: "开始复测" }).click();
+  await page.getByRole("main").getByRole("link", { name: "开始复测" }).click();
   await page.setInputFiles('[data-testid="photo-input"]', path.join(photos, "recheck-angle-17.png"));
   await page.getByRole("button", { name: "开始分析" }).click();
   await expect(page).toHaveURL(/\/result\/[0-9a-f-]+$/);

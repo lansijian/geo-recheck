@@ -11,6 +11,7 @@ backend/data/*.db
 backend/data/*.sqlite3
 frontend/node_modules/
 frontend/dist/
+.vercel/
 data/datasets/
 data/benchmark/images/
 data/images/

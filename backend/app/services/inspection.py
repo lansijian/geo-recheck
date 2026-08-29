@@ -12,7 +12,13 @@ import numpy as np
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
-from app.config import CAMERA_PROFILE_PATH, DEMO_CASES_ROOT, DEMO_LOCATION_MODE, EVIDENCE_ROOT
+from app.config import (
+    CAMERA_PROFILE_PATH,
+    DATA_ROOT,
+    DEMO_CASES_ROOT,
+    DEMO_LOCATION_MODE,
+    EVIDENCE_ROOT,
+)
 from app.cv.pipeline import measure_image, scan_marker_ids
 from app.models import Inspection, MonitorPoint
 from app.services.registry import boards_for_point, match_point, point_to_dict
@@ -407,7 +413,7 @@ def seed_baseline(session: Session) -> None:
         session.commit()
     from app.cv.image_io import read_image
 
-    benchmark_image = EVIDENCE_ROOT.parent / "wall_demo" / "images" / "baseline_front.png"
+    benchmark_image = DATA_ROOT / "wall_demo" / "images" / "baseline_front.png"
     rectified_url = None
     original_url = None
     overlay_url = None

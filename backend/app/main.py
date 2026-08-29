@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import math
+import shutil
 import statistics
 import uuid
 from contextlib import asynccontextmanager
@@ -19,7 +20,15 @@ from sqlalchemy.orm import Session
 import cv2
 import numpy as np
 
-from app.config import BENCHMARK_ROOT, CAMERA_PROFILE_PATH, DEMO_CASES_ROOT, EVIDENCE_ROOT, PROJECT_ROOT
+from app.config import (
+    BENCHMARK_ROOT,
+    CAMERA_PROFILE_PATH,
+    CAMERA_PROFILE_SOURCE_PATH,
+    DEMO_CASES_ROOT,
+    EVIDENCE_ROOT,
+    PERSISTENCE_MODE,
+    PROJECT_ROOT,
+)
 from app.cv.calibration import calibrate_camera
 from app.db.session import Base, SessionLocal, engine, get_db, migrate_schema
 from app.models import BenchmarkTrial, Inspection, MonitorPoint
@@ -49,15 +58,28 @@ from app.services.stepfun_observer import ai_status
 logger = logging.getLogger("uvicorn.error")
 
 
-@asynccontextmanager
-async def lifespan(_: FastAPI):
+def initialize_runtime() -> None:
     EVIDENCE_ROOT.mkdir(parents=True, exist_ok=True)
+    CAMERA_PROFILE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    if not CAMERA_PROFILE_PATH.exists() and CAMERA_PROFILE_SOURCE_PATH.exists():
+        shutil.copyfile(CAMERA_PROFILE_SOURCE_PATH, CAMERA_PROFILE_PATH)
     Base.metadata.create_all(bind=engine)
     migrate_schema()
     with SessionLocal() as session:
         seed_points(session)
         seed_baseline(session)
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    initialize_runtime()
     yield
+
+
+if PERSISTENCE_MODE == "serverless-ephemeral":
+    # Vercel may reuse the ASGI app without emitting a lifespan event. Cold-start
+    # initialization keeps the first API request independent of that behavior.
+    initialize_runtime()
 
 
 app = FastAPI(
@@ -139,7 +161,12 @@ class AIReviewDecisionPayload(BaseModel):
 
 @app.get("/api/health")
 def health() -> dict:
-    return {"status": "ok", "service": "geo-recheck", "version": "0.6.0"}
+    return {
+        "status": "ok",
+        "service": "geo-recheck",
+        "version": "0.6.0",
+        "persistence": PERSISTENCE_MODE,
+    }
 
 
 @app.get("/api/ai/status")
