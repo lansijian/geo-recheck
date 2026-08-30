@@ -1,4 +1,4 @@
-import type { AIReview, AIStatus, BenchmarkSummary, DemoCase, Measurement, Point, PointCreatePayload } from "../types";
+import type { AIReview, AIStatus, BenchmarkSummary, DemoCase, Measurement, Point, PointCreatePayload, RuntimeHealth } from "../types";
 import type { ShowcaseCase } from "../components/showcase/showcaseData";
 
 async function parseResponse<T>(response: Response): Promise<T> {
@@ -112,6 +112,10 @@ export async function getShowcaseCases(): Promise<ShowcaseCase[]> {
 
 export async function getAIStatus(): Promise<AIStatus> {
   return parseResponse<AIStatus>(await fetch("/api/ai/status"));
+}
+
+export async function getRuntimeHealth(): Promise<RuntimeHealth> {
+  return parseResponse<RuntimeHealth>(await fetch("/api/health"));
 }
 
 export async function runAIReview(id: string, caseId?: string): Promise<AIReview> {

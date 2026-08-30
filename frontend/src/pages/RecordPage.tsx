@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { evidenceUrl, getInspection } from "../api/client";
 import type { Measurement } from "../types";
+import { loadShowcaseSessionRecord } from "../utils/showcaseSession";
 
 function Evidence({ src, alt, label }: { src: string | null | undefined; alt: string; label: string }) {
   const url = evidenceUrl(src);
@@ -12,9 +13,16 @@ export default function RecordPage() {
   const { id = "" } = useParams();
   const [record, setRecord] = useState<Measurement | null>(null);
   const [error, setError] = useState("");
+  const [isShowcaseSession, setIsShowcaseSession] = useState(false);
 
   useEffect(() => {
     let active = true;
+    const sessionRecord = loadShowcaseSessionRecord(id);
+    if (sessionRecord) {
+      setRecord(sessionRecord);
+      setIsShowcaseSession(true);
+      return () => { active = false; };
+    }
     getInspection(id).then((value) => { if (active) setRecord(value); }).catch((reason: unknown) => { if (active) setError(reason instanceof Error ? reason.message : "记录加载失败"); });
     return () => { active = false; };
   }, [id]);
@@ -33,6 +41,7 @@ export default function RecordPage() {
   return (
     <section className="page record-page">
       <div className="record-toolbar no-print"><div><p className="eyebrow">几何结果 + 人工确认的 AI 观察</p><h1>巡查复测记录</h1></div><div><button className="button" type="button" onClick={() => window.print()}>打印 / 导出 PDF</button><Link className="button primary" to="/">返回首页</Link></div></div>
+      {isShowcaseSession ? <div className="notice" role="status">路演会话记录：保存在当前浏览器标签页中，用于稳定演示；正式部署需接入持久化数据库。</div> : null}
       {record.camera_profile_is_demo ? <div className="notice error" role="alert">未标定相机，毫米值仅供参考。</div> : null}
       <article className="paper-record">
         <header><div><p>{record.monitor_point_name} · {record.structure_name} · {record.scene_type}</p><h2>墙体裂缝巡查复测记录</h2></div><span>记录编号：{record.id}</span></header>

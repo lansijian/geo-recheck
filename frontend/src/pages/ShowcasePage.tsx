@@ -1,19 +1,83 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { confirmMeasurement, decideAIReviewItem, getShowcaseCases, measureImage, replayAIReview, runAIReview } from "../api/client";
+import { confirmMeasurement, decideAIReviewItem, getRuntimeHealth, getShowcaseCases, measureImage, replayAIReview, runAIReview } from "../api/client";
 import PhoneFrame from "../components/showcase/PhoneFrame";
 import ShowcaseScene from "../components/showcase/ShowcaseScene";
 import ShowcaseSidebar from "../components/showcase/ShowcaseSidebar";
 import { FIELD_STEPS, PUBLIC_PHASES, type ShowcaseCase } from "../components/showcase/showcaseData";
 import type { AIReview, Measurement } from "../types";
+import { saveShowcaseSessionRecord } from "../utils/showcaseSession";
 import "../showcase.css";
 
 type AsyncState = "idle" | "running" | "ready" | "failed";
 type Decision = "pending" | "accepted" | "rejected";
 type CaptureKind = "context" | "closeup";
+type PersistenceMode = "detecting" | "local-durable" | "serverless-ephemeral";
 
 const EXHIBITION_CASES = new Set(["case_03_seepage", "case_04_spalling", "case_05_quality_fail"]);
 const PLAYBACK_SPEED = import.meta.env.DEV && new URLSearchParams(window.location.search).get("speed") === "fast" ? 0.02 : 1;
+
+function buildSessionReplay(activeCase: ShowcaseCase, measurement: Measurement): AIReview {
+  return {
+    id: `showcase-${measurement.id}`,
+    inspection_id: measurement.id,
+    provider: "stepfun",
+    model: activeCase.ai_replay.model,
+    status: "completed",
+    created_at: new Date().toISOString(),
+    latency_ms: activeCase.ai_replay.original_latency_ms,
+    attempts: activeCase.ai_replay.attempts,
+    error_code: null,
+    error_message: null,
+    parsed: {
+      scene_consistency: activeCase.ai_replay.parsed.scene_consistency,
+      coverage_complete: activeCase.ai_replay.parsed.coverage_complete,
+      missing_views: activeCase.ai_replay.parsed.missing_views,
+      record_draft: activeCase.ai_replay.parsed.record_draft,
+      disclaimer: activeCase.ai_replay.parsed.disclaimer,
+    },
+    items: activeCase.ai_replay.parsed.observations.map((item, index) => ({
+      id: index + 1,
+      type: item.type,
+      state: item.state,
+      evidence: item.evidence,
+      confidence: item.confidence,
+      requires_human_check: true,
+      human_status: "pending",
+      edited_evidence: null,
+    })),
+  };
+}
+
+function applySessionDecision(review: AIReview | null, decision: Exclude<Decision, "pending">): AIReview | null {
+  if (!review) return null;
+  return {
+    ...review,
+    items: review.items.map((item) => {
+      const isPositiveFinding = item.type !== "none" && item.state !== "stable" && item.state !== "not_visible";
+      return { ...item, human_status: decision === "accepted" && isPositiveFinding ? "accepted" : "rejected" };
+    }),
+  };
+}
+
+function buildSessionRecord(measurement: Measurement, activeCase: ShowcaseCase, review: AIReview | null, observerName: string, remark: string): Measurement {
+  const accepted = review?.items.filter((item) => item.human_status === "accepted" || item.human_status === "edited") ?? [];
+  const opening = measurement.opening_delta_mm ?? measurement.delta_mm;
+  const geometryText = opening == null ? "本次几何测量未通过质量门控，未形成毫米结果。" : `本次裂缝较上期张开 ${opening.toFixed(1)} mm。`;
+  const observationText = accepted.map((item) => `${item.edited_evidence ?? item.evidence}，已由监测员人工确认。`).join("");
+  return {
+    ...measurement,
+    observer_name: observerName,
+    remark,
+    status: measurement.status === "rejected" ? "rejected" : "confirmed",
+    human_confirmed: measurement.status !== "rejected",
+    demo_case_id: activeCase.case_id,
+    ai_review: review,
+    record_text: `${geometryText}${observationText}`,
+    previous_evidence: { original: activeCase.assets.previous_close, rectified: null, capture_time: measurement.capture_time },
+    evidence: { ...measurement.evidence, original: activeCase.assets.current_close, rectified: null, overlay: null },
+  };
+}
 
 export default function ShowcasePage() {
   const navigate = useNavigate();
@@ -34,6 +98,7 @@ export default function ShowcasePage() {
   const [observerName, setObserverName] = useState("");
   const [remark, setRemark] = useState("");
   const [error, setError] = useState("");
+  const [persistenceMode, setPersistenceMode] = useState<PersistenceMode>("detecting");
   const geometryRun = useRef("");
   const replayRun = useRef("");
   const transferTimer = useRef<number | null>(null);
@@ -44,9 +109,11 @@ export default function ShowcasePage() {
   const isHumanTurn = step.id === "human_confirm";
   const isFinished = step.id === "record";
   const runtimeLabel = playing ? "自动体验运行中" : isHumanTurn ? "轮到评委操作" : isFinished ? "体验完成" : stepIndex === 0 ? "等待开始" : "已暂停，可继续";
+  const isServerlessSession = persistenceMode === "serverless-ephemeral";
 
   useEffect(() => {
     void getShowcaseCases().then((items) => setCases(items.filter((item) => EXHIBITION_CASES.has(item.case_id)))).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Showcase 数据加载失败。"));
+    void getRuntimeHealth().then((health) => setPersistenceMode(health.persistence)).catch(() => setPersistenceMode(window.location.hostname.endsWith(".vercel.app") ? "serverless-ephemeral" : "local-durable"));
     return () => { if (transferTimer.current) window.clearTimeout(transferTimer.current); };
   }, []);
 
@@ -85,15 +152,16 @@ export default function ShowcasePage() {
   const runReplay = useCallback(async () => {
     if (!activeCase || !measurement || replayRun.current === measurement.id) return;
     replayRun.current = measurement.id;
-    setReplayState("running"); setProcessMessage("正在把已审计的 StepFun 成功响应写入本次 SQLite 记录…");
+    if (persistenceMode === "detecting") return;
+    setReplayState("running"); setProcessMessage(isServerlessSession ? "正在载入已审计的 StepFun 实测回放…" : "正在把已审计的 StepFun 成功响应写入本次 SQLite 记录…");
     try {
-      const replay = await replayAIReview(measurement.id, activeCase.case_id);
+      const replay = isServerlessSession ? buildSessionReplay(activeCase, measurement) : await replayAIReview(measurement.id, activeCase.case_id);
       setReview(replay); setReplayState("ready");
-      setProcessMessage(`AI 实测回放已落库：${activeCase.ai_replay.model}，原始 ${(activeCase.ai_replay.original_latency_ms / 1000).toFixed(1)} 秒。`);
+      setProcessMessage(isServerlessSession ? `AI 实测回放已载入浏览器会话：${activeCase.ai_replay.model}，原始 ${(activeCase.ai_replay.original_latency_ms / 1000).toFixed(1)} 秒。` : `AI 实测回放已落库：${activeCase.ai_replay.model}，原始 ${(activeCase.ai_replay.original_latency_ms / 1000).toFixed(1)} 秒。`);
     } catch (reason) {
       setReplayState("failed"); setPlaying(false); setError(reason instanceof Error ? reason.message : "AI 实测回放失败。");
     }
-  }, [activeCase, measurement]);
+  }, [activeCase, isServerlessSession, measurement, persistenceMode]);
 
   useEffect(() => { if (step.id === "geometry") void runGeometry(); }, [runGeometry, step.id]);
   useEffect(() => { if (step.id === "ai_review" && geometryState === "ready") void runReplay(); }, [geometryState, runReplay, step.id]);
@@ -121,6 +189,10 @@ export default function ShowcasePage() {
 
   async function runLiveAI() {
     if (!activeCase || !measurement || liveAIState === "running") return;
+    if (isServerlessSession) {
+      setProcessMessage("稳定路演模式使用已审计 AI 回放；实时 StepFun 请在本地一键启动版中运行。");
+      return;
+    }
     setLiveAIState("running"); setProcessMessage("正在运行实时 StepFun，预计 30–60 秒；几何结果不会被修改。");
     try {
       const live = await runAIReview(measurement.id, activeCase.case_id);
@@ -133,9 +205,22 @@ export default function ShowcasePage() {
 
   async function finishConfirmation() {
     if (!measurement || !observerName.trim() || !remark.trim()) return;
-    if (measurement.status === "rejected") { setRecord(measurement); setStepIndex(FIELD_STEPS.length - 1); return; }
+    if (!activeCase) return;
+    if (measurement.status === "rejected") {
+      const failedRecord = isServerlessSession ? buildSessionRecord(measurement, activeCase, review, observerName.trim(), remark.trim()) : measurement;
+      if (isServerlessSession) saveShowcaseSessionRecord(failedRecord);
+      setRecord(failedRecord); setStepIndex(FIELD_STEPS.length - 1); return;
+    }
     if (decision === "pending") return;
     try {
+      if (isServerlessSession) {
+        const decidedReview = applySessionDecision(review, decision);
+        const sessionRecord = buildSessionRecord(measurement, activeCase, decidedReview, observerName.trim(), remark.trim());
+        saveShowcaseSessionRecord(sessionRecord);
+        setReview(decidedReview); setRecord(sessionRecord); setStepIndex(FIELD_STEPS.length - 1); setPlaying(false);
+        setProcessMessage("人工决定与路演记录已保存在当前浏览器会话，不再依赖 Vercel 临时 SQLite。");
+        return;
+      }
       let latestReview = review;
       if (latestReview?.status === "completed") {
         for (const item of latestReview.items.filter((entry) => entry.human_status === "pending")) {
@@ -177,14 +262,14 @@ export default function ShowcasePage() {
       <div className="showcase-progress public-progress">{PUBLIC_PHASES.map((phase, index) => <div key={phase.id} className={index === publicPhaseIndex ? "active" : index < publicPhaseIndex ? "done" : ""}><span>{index < publicPhaseIndex ? "✓" : phase.number}</span><b>{phase.label}</b></div>)}</div>
       <div className={`showcase-runtime ${playing ? "running" : isHumanTurn ? "human-turn" : ""}`} role="status" aria-live="polite" data-testid="showcase-runtime">
         <div className="runtime-current"><i aria-hidden="true" /><span><strong>{runtimeLabel}</strong><b>{step.label}</b><small>{processMessage || step.explanation}</small></span></div>
-        <div className="runtime-proof" aria-label="运行方式"><span><b>LIVE</b> Three.js 现场</span><span><b>LIVE</b> FastAPI / OpenCV</span><span><b className="replay">REPLAY</b> StepFun 实测</span><span><b className="write">WRITE</b> 巡查记录</span></div>
-        <small className="runtime-disclosure">几何实时调用 API；AI 默认回放已审计实测响应，结果页可主动运行实时 StepFun。</small>
+        <div className="runtime-proof" aria-label="运行方式"><span><b>LIVE</b> Three.js 现场</span><span><b>LIVE</b> FastAPI / OpenCV</span><span><b className="replay">REPLAY</b> StepFun 实测</span><span><b className="write">{isServerlessSession ? "SESSION" : "WRITE"}</b> {isServerlessSession ? "路演记录" : "巡查记录"}</span></div>
+        <small className="runtime-disclosure">{isServerlessSession ? "Vercel 路演将 AI 回放、人工决定与记录保存在当前浏览器会话；几何仍实时调用 API。" : "几何实时调用 API；AI 默认回放已审计实测响应，结果页可主动运行实时 StepFun。"}</small>
       </div>
       {error ? <div className="notice error showcase-error">{error}</div> : null}
       <div className="showcase-layout">
         <ShowcaseScene activeCase={activeCase} step={step} onCapture={handleCapture} />
         {captureTransfer ? <div key={captureTransfer.token} className={`capture-transfer ${captureTransfer.kind}`}><img src={captureTransfer.url} alt="现场照片正在进入手机" /><span>照片进入手机</span></div> : null}
-        <PhoneFrame activeCase={activeCase} step={step} measurement={measurement} review={review} processMessage={processMessage} processBusy={geometryState === "running" || replayState === "running"} captures={captures} decision={decision} observerName={observerName} remark={remark} record={record} liveAIState={liveAIState} onPrimary={handlePrimary} onDecision={setDecision} onObserverName={setObserverName} onRemark={setRemark} onRunLiveAI={() => void runLiveAI()} onOpenRecord={() => record && navigate(`/record/${record.id}`)} />
+        <PhoneFrame activeCase={activeCase} step={step} measurement={measurement} review={review} processMessage={processMessage} processBusy={geometryState === "running" || replayState === "running"} captures={captures} decision={decision} observerName={observerName} remark={remark} record={record} liveAIState={liveAIState} sessionMode={isServerlessSession} onPrimary={handlePrimary} onDecision={setDecision} onObserverName={setObserverName} onRemark={setRemark} onRunLiveAI={() => void runLiveAI()} onOpenRecord={() => record && navigate(`/record/${record.id}`)} />
         <ShowcaseSidebar step={step} activeCase={activeCase} isPlaying={playing} />
       </div>
     </section>

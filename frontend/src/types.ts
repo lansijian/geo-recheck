@@ -157,6 +157,13 @@ export type AIStatus = {
   configured: boolean;
 };
 
+export type RuntimeHealth = {
+  status: "ok";
+  service: "geo-recheck";
+  version: string;
+  persistence: "local-durable" | "serverless-ephemeral";
+};
+
 export type DemoCase = {
   case_id: string;
   title: string;

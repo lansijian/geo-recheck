@@ -121,6 +121,39 @@ test("自动巡查在人工确认处强制暂停且用户输入进入正式记�
   await expect(page.getByText("已确认写入", { exact: true })).toBeVisible();
 });
 
+test("Vercel 路演会话不依赖临时 SQLite 且人工确认无 404", async ({ page }) => {
+  test.setTimeout(45_000);
+  const failures = collectBrowserFailures(page);
+  const crossInstanceWrites: string[] = [];
+  await page.route("**/api/health", async (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ status: "ok", service: "geo-recheck", version: "0.6.0", persistence: "serverless-ephemeral" }),
+  }));
+  page.on("request", (request) => {
+    if (/\/ai-review(?:\/replay|\/items\/)|\/confirm$/.test(new URL(request.url()).pathname)) crossInstanceWrites.push(request.url());
+  });
+
+  await page.goto("/showcase?speed=fast");
+  await expect(page.getByTestId("showcase-runtime").getByText("SESSION", { exact: true })).toBeVisible();
+  await page.getByTestId("showcase-autoplay").click();
+  await expect(page.getByText("自动演示已暂停 · 轮到你操作", { exact: true })).toBeVisible({ timeout: 25_000 });
+  await page.getByRole("button", { name: "确认", exact: true }).click();
+  await page.getByRole("button", { name: "一键填入演示信息" }).click();
+  await page.getByRole("button", { name: "确认并生成记录" }).click();
+  await expect(page.getByText("巡查记录已生成", { exact: true })).toBeVisible();
+  await expect(page.getByText(/浏览器的路演会话记录/)).toBeVisible();
+  expect(crossInstanceWrites).toEqual([]);
+  expect(failures).toEqual([]);
+
+  await page.getByRole("button", { name: "查看正式记录" }).click();
+  await expect(page).toHaveURL(/\/record\/[0-9a-f-]+$/);
+  await expect(page.getByText(/路演会话记录：保存在当前浏览器标签页中/)).toBeVisible();
+  await expect(page.getByText("路演评委", { exact: true })).toBeVisible();
+  await expect(page.getByText("已确认写入", { exact: true })).toBeVisible();
+  expect(failures).toEqual([]);
+});
+
 test("实时 AI 是显式可选动作且失败不覆盖几何结果", async ({ page }) => {
   await page.goto("/showcase");
   await enterResult(page);
